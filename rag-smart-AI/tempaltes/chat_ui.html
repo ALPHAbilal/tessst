@@ -534,6 +534,8 @@
             border: 1px solid var(--border-color);
             overflow: hidden;
             transition: border-color 0.2s ease;
+            flex-wrap: nowrap;
+            align-items: flex-start;
         }
 
         .input-group:focus-within {
@@ -549,6 +551,9 @@
             color: var(--text-light);
             font-size: 0.95rem;
             transition: all 0.2s ease;
+            min-height: 40px;
+            line-height: 1.5;
+            max-height: 150px;
         }
 
         #messageInput:focus {
@@ -777,90 +782,6 @@
             align-items: center;
         }
 
-        /* Agent Notification Styles */
-        .agent-notifications {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            max-width: 400px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .agent-notification-content {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-left: 4px solid var(--accent-color);
-            border-radius: var(--border-radius);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
-
-        .agent-notification-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 1rem;
-            background-color: rgba(110, 86, 207, 0.1);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .agent-notification-title {
-            font-weight: 500;
-            color: var(--accent-color);
-        }
-
-        .agent-notification-close {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .agent-notification-close:hover {
-            color: var(--text-light);
-        }
-
-        .agent-notification-body {
-            padding: 1rem;
-        }
-
-        .agent-notification-actions {
-            display: flex;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem 1rem;
-        }
-
-        .agent-notification-actions button {
-            flex: 1;
-            padding: 0.5rem;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-
-        .agent-notification-actions .primary-action {
-            background-color: var(--accent-color);
-            color: white;
-        }
-
-        .agent-notification-actions .primary-action:hover {
-            background-color: var(--primary-button-hover-bg);
-        }
-
-        .agent-notification-actions .secondary-action {
-            background-color: var(--bg-input);
-            color: var(--text-light);
-        }
-
-        .agent-notification-actions .secondary-action:hover {
-            background-color: var(--border-color);
-        }
-
         /* Responsive Design */
         @media (max-width: 768px) {
             .sidebar {
@@ -885,12 +806,6 @@
             .main-content {
                 width: 100%;
                 max-width: 100%;
-            }
-
-            .agent-notifications {
-                max-width: 90%;
-                left: 5%;
-                right: 5%;
             }
         }
     </style>
@@ -1057,19 +972,20 @@
 
                  <!-- Input Area -->
                 <div class="chat-input-area p-3"> {# Added padding class #}
-                     <form id="chatForm" class="w-100"> {# Make form take width #}
-                         <div class="input-group">
+                     <form id="chatForm" class="w-100 d-flex flex-column"> {# Make form take width and use flex column #}
+                         <small class="text-muted mb-1" style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">Press Enter for new line, Shift+Enter to send</small>
+                         <div class="input-group mb-1">
                              {# Temp file button #}
                              <input type="file" id="temp-file-upload-input" accept=".pdf,.txt,.md,.docx" style="display: none;" multiple>
                              <button class="btn btn-secondary" type="button" id="temp-file-upload-button" title="Attach temporary file(s)" {% if not current_chat_id %}disabled{% endif %}>
                                  <i class="fas fa-paperclip"></i>
                              </button>
                              {# Message input #}
-                             <input type="text" class="form-control" id="messageInput" placeholder="Ask a question or attach file(s)..." {% if not current_chat_id %}disabled{% endif %}>
+                             <textarea class="form-control" id="messageInput" placeholder="Ask a question or attach file(s)..." rows="1" style="resize: none; overflow-y: auto;" {% if not current_chat_id %}disabled{% endif %}></textarea>
                              {# Temp file indicator (simple version) #}
                               <div id="temp-file-display-list" style="font-size: 0.8em; margin-left: 5px; align-self: center; max-width: 150px; overflow:hidden; white-space: nowrap;"></div>
                              {# Send Button #}
-                             <button type="submit" class="btn btn-primary" id="send-button" {% if not current_chat_id %}disabled{% endif %}>
+                             <button type="submit" class="btn btn-primary" id="send-button" title="Press Shift+Enter to send" {% if not current_chat_id %}disabled{% endif %}>
                                  <i class="fas fa-paper-plane"></i> Send
                              </button>
                 </div>
@@ -1539,7 +1455,7 @@
                 });
             }
 
-            // --- Modified sendChatMessage to include template info and agent system ---
+            // --- Modified sendChatMessage to include template info ---
             async function sendChatMessage() {
                 if (!messageInput || !sendButton || !chatBox || !currentChatId) { console.error("Chat UI missing."); return; }
                 const messageText = messageInput.value.trim();
@@ -1571,20 +1487,6 @@
                 if (useTemplateButton) useTemplateButton.disabled = true;
                 if (templateSelect) templateSelect.disabled = true;
                 let thinkingIndicator = null;
-
-                // Process message with agent system first if there's actual text content
-                if (messageText) {
-                    try {
-                        // Get the current vector store ID
-                        const vectorStoreId = "{{ current_vector_store_id }}";
-
-                        // Process the message with the agent system
-                        await processAgentRecommendations(messageText, currentChatId, vectorStoreId);
-                    } catch (agentError) {
-                        console.error('Error processing with agent system:', agentError);
-                        // Continue with normal processing even if agent system fails
-                    }
-                }
 
                 try {
                     thinkingIndicator = addMessage('assistant', '...', [], true);
@@ -1720,9 +1622,33 @@
             }
 
             if (messageInput) {
+                // Function to auto-resize the textarea
+                function autoResizeTextarea() {
+                    messageInput.style.height = 'auto';
+                    const newHeight = Math.min(messageInput.scrollHeight, 150); // Max height of 150px
+                    messageInput.style.height = newHeight + 'px';
+                }
+
+                // Auto-resize on input
+                messageInput.addEventListener('input', autoResizeTextarea);
+
+                // Handle Enter and Shift+Enter
                 messageInput.addEventListener('keypress', function(event) {
-                     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }
+                    if (event.key === 'Enter') {
+                        if (event.shiftKey) {
+                            // Shift+Enter sends the message
+                            event.preventDefault();
+                            sendChatMessage();
+                        } else {
+                            // Enter creates a new line
+                            // No need to prevent default as it will naturally create a new line
+                            // The textarea will be auto-resized on input event
+                        }
+                    }
                 });
+
+                // Initialize height
+                setTimeout(autoResizeTextarea, 0);
             }
 
             // Initial Scroll - with a slight delay to ensure all content is rendered
@@ -1836,192 +1762,6 @@
 
         // Initialize templates on page load
         document.addEventListener('DOMContentLoaded', loadTemplates);
-
-        // --- Agent Notification Functions ---
-        function showAgentNotification(message, actions = []) {
-            const notificationContainer = document.getElementById('agent-notifications');
-            const messageElement = document.getElementById('agent-notification-message');
-            const actionsContainer = document.getElementById('agent-notification-actions');
-
-            // Set the message
-            messageElement.textContent = message;
-
-            // Clear previous actions
-            actionsContainer.innerHTML = '';
-
-            // Add action buttons
-            if (actions && actions.length > 0) {
-                actions.forEach(action => {
-                    const button = document.createElement('button');
-                    button.textContent = action.text;
-                    button.className = action.primary ? 'primary-action' : 'secondary-action';
-                    button.onclick = () => {
-                        if (action.callback) action.callback();
-                        dismissAgentNotification();
-                    };
-                    actionsContainer.appendChild(button);
-                });
-            }
-
-            // Show the notification
-            notificationContainer.style.display = 'block';
-
-            // Auto-dismiss after 10 seconds if no actions
-            if (!actions || actions.length === 0) {
-                setTimeout(dismissAgentNotification, 10000);
-            }
-        }
-
-        function dismissAgentNotification() {
-            const notificationContainer = document.getElementById('agent-notifications');
-            notificationContainer.style.display = 'none';
-        }
-
-        // Function to process agent recommendations
-        async function processAgentRecommendations(message, chatId, kbId) {
-            try {
-                const response = await fetch('/api/agent/process_message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        chat_id: chatId,
-                        kb_id: kbId
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to process message with agent system');
-                }
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const recommendations = result.recommendations || {};
-
-                    // Handle template suggestions
-                    if (recommendations.template && recommendations.template.suggestion) {
-                        const suggestion = recommendations.template.suggestion;
-                        if (suggestion.type === 'alternative_templates' && suggestion.alternatives) {
-                            showAgentNotification(suggestion.message, [
-                                {
-                                    text: `Use ${suggestion.alternatives[0]}`,
-                                    primary: true,
-                                    callback: () => selectTemplate(suggestion.alternatives[0])
-                                },
-                                {
-                                    text: 'Ignore',
-                                    primary: false
-                                }
-                            ]);
-                        } else if (suggestion.type === 'best_template' && suggestion.template_id) {
-                            showAgentNotification(suggestion.message, [
-                                {
-                                    text: `Use ${suggestion.template_id}`,
-                                    primary: true,
-                                    callback: () => selectTemplate(suggestion.template_id)
-                                },
-                                {
-                                    text: 'Ignore',
-                                    primary: false
-                                }
-                            ]);
-                        }
-                    }
-
-                    // Handle KB suggestions
-                    if (recommendations.kb && recommendations.kb.suggestion) {
-                        const suggestion = recommendations.kb.suggestion;
-                        if (suggestion.type === 'select_kb' && suggestion.best_kb) {
-                            showAgentNotification('You need to select a knowledge base. ' + suggestion.message, [
-                                {
-                                    text: `Use suggested KB`,
-                                    primary: true,
-                                    callback: () => selectKnowledgeBase(suggestion.best_kb.kb_id)
-                                },
-                                {
-                                    text: 'Ignore',
-                                    primary: false
-                                }
-                            ]);
-                        } else if (suggestion.type === 'kb_empty') {
-                            showAgentNotification(suggestion.message, [
-                                {
-                                    text: 'Upload Files',
-                                    primary: true,
-                                    callback: () => openUploadModal(kbId)
-                                },
-                                {
-                                    text: 'Ignore',
-                                    primary: false
-                                }
-                            ]);
-                        } else if (suggestion.type === 'kb_not_found' || suggestion.type === 'need_kb_for_question') {
-                            showAgentNotification(suggestion.message);
-                        }
-                    }
-
-                    // Handle file filtering recommendations
-                    if (recommendations.file_filter && recommendations.file_filter.type === 'suggested_files') {
-                        showAgentNotification(recommendations.file_filter.message, [
-                            {
-                                text: 'Apply Filter',
-                                primary: true,
-                                callback: () => applyFileFilter(recommendations.file_filter.included_file_ids)
-                            },
-                            {
-                                text: 'Ignore',
-                                primary: false
-                            }
-                        ]);
-                    }
-                }
-
-                return result;
-            } catch (error) {
-                console.error('Error processing agent recommendations:', error);
-                return { success: false, error: error.message };
-            }
-        }
-
-        // Helper functions for agent actions
-        function selectTemplate(templateId) {
-            const templateSelect = document.getElementById('template-select');
-            if (templateSelect) {
-                templateSelect.value = templateId;
-                // Trigger change event
-                const event = new Event('change');
-                templateSelect.dispatchEvent(event);
-            }
-        }
-
-        function selectKnowledgeBase(kbId) {
-            const kbSelect = document.getElementById('kb-list-select');
-            if (kbSelect) {
-                kbSelect.value = kbId;
-                // Trigger change event
-                const event = new Event('change');
-                kbSelect.dispatchEvent(event);
-            }
-        }
-
-        function openUploadModal(kbId) {
-            const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
-            const kbSelect = document.getElementById('vector_store_id_upload');
-            if (kbSelect && kbId) {
-                kbSelect.value = kbId;
-            }
-            uploadModal.show();
-        }
-
-        function applyFileFilter(fileIds) {
-            // This would need to be implemented based on your file filtering UI
-            console.log('Applying file filter for IDs:', fileIds);
-            // For now, just show a notification that this would be applied
-            showAgentNotification(`File filter applied for ${fileIds.length} files`);
-        }
     </script>
 
     <!-- Modal Popups -->
@@ -2181,24 +1921,6 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="save-file-selection">Apply Changes</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Agent Notifications -->
-    <div id="agent-notifications" class="agent-notifications" style="display: none;">
-        <div class="agent-notification-content">
-            <div class="agent-notification-header">
-                <span class="agent-notification-title">Agent Notification</span>
-                <button type="button" class="agent-notification-close" onclick="dismissAgentNotification()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="agent-notification-body">
-                <p id="agent-notification-message"></p>
-            </div>
-            <div class="agent-notification-actions" id="agent-notification-actions">
-                <!-- Action buttons will be added dynamically -->
             </div>
         </div>
     </div>
