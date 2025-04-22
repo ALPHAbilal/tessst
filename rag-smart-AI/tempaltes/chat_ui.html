@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ current_chat_title | default('Agent RAG - Chat') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Updated Dark Color Palette - Inspired by the reference image */
+            --bg-dark: #141414;         /* Darker background */
+            --bg-sidebar: #1e1e1e;      /* Sidebar background */
+            --bg-chat: #1a1a1a;         /* Chat area background */
+            --bg-input: #242424;        /* Input background */
+            --bg-card: #1e1e1e;         /* Card background */
+            --bg-pre: #141414;          /* Code block background */
+            --bg-table-header: rgba(36, 36, 36, 0.5); /* Table header background */
+            --text-light: #e6e6e6;      /* Primary light text */
+            --text-secondary: #a0a0a0;  /* Secondary/muted text */
+            --accent-color: #6e56cf;    /* Accent color - purple tint */
+            --primary-button-bg: #6e56cf; /* Primary button background */
+            --primary-button-hover-bg: #7c66d9;
+            --border-color: #2a2a2a;    /* Subtle borders */
+            --border-table: #333333;    /* Table border */
+            --error-color: #e54d4d;     /* Error color */
+            --success-color: #3ba55c;   /* Success color */
+            --link-color: #6e56cf;      /* Link color */
+            --delete-color: #e54d4d;    /* Delete color */
+
+            /* Layout & Spacing */
+            --sidebar-width: 280px;
+            --main-content-max-width: 1100px;
+            --border-radius: 8px;
+            --spacing-unit: 1rem;
+
+            /* Typography */
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+
+        /* Base Styles */
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            display: flex;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        /* Main Content Wrapper */
+        .main-content-wrapper {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden; /* Prevent wrapper from scrolling */
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Adjust main content when sidebar is collapsed */
+        .sidebar.collapsed + .main-content-wrapper {
+            margin-left: -230px; /* Adjust based on sidebar width difference */
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            padding: var(--spacing-unit);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+            /* --- Modified for better scrolling --- */
+            height: 100vh; /* Make sidebar take full viewport height */
+            overflow-y: auto; /* Allow ONLY the sidebar to scroll vertically if content overflows */
+            /* --- Thin scrollbar for sidebar --- */
+            scrollbar-width: thin;
+            /* --- Transition for collapsible sidebar --- */
+            transition: width 0.3s ease, transform 0.3s ease;
+            position: relative;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            /* --- End Modified --- */
+        }
+
+        /* Collapsed sidebar state */
+        .sidebar.collapsed {
+            width: 50px;
+            padding: 0.5rem 0;
+            overflow: hidden;
+        }
+
+        /* Hide sidebar content when collapsed */
+        .sidebar.collapsed .sidebar-content {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* Toggle button for sidebar */
+        .sidebar-toggle {
+            position: absolute;
+            top: 10px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 100;
+            border: none;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+            font-size: 0.7rem;
+        }
+
+        .sidebar-toggle:hover {
+            background-color: var(--primary-button-hover-bg);
+            transform: scale(1.1);
+        }
+
+        .sidebar-toggle:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(110, 86, 207, 0.4);
+        }
+
+        .sidebar-toggle i {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+
+        /* Custom scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(114, 137, 218, 0.4);
+            border-radius: 10px;
+            border: none;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(114, 137, 218, 0.6);
+        }
+
+        /* Apply same scrollbar style to all scrollable elements */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(114, 137, 218, 0.4);
+            border-radius: 10px;
+            border: none;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(114, 137, 218, 0.6);
+        }
+
+        .sidebar h2 {
+            font-size: 1.2em;
+            color: var(--text-light);
+            margin: 0 0 var(--spacing-unit) 0;
+            padding-bottom: calc(var(--spacing-unit)/2);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .sidebar-section {
+            margin-bottom: calc(var(--spacing-unit) * 1.5);
+            padding-bottom: calc(var(--spacing-unit) * 1.5);
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(30, 30, 30, 0.5);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+        }
+
+        .sidebar-section:last-child { border-bottom: none; margin-bottom: 0; }
+
+        /* Section Header with Add Button */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-add-btn {
+            width: 24px;
+            height: 24px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            font-size: 0.8rem;
+        }
+
+        .section-add-btn:hover {
+            background-color: var(--primary-button-hover-bg);
+            transform: scale(1.1);
+        }
+
+        .sidebar-section h3 {
+            font-size: 1em;
+            color: var(--text-light);
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .section-add-btn {
+            width: 24px;
+            height: 24px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+            font-size: 0.8rem;
+        }
+
+        .section-add-btn:hover {
+            background-color: var(--primary-button-hover-bg);
+            transform: scale(1.1);
+        }
+
+        .sidebar-section .step-label {
+            display: block;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: var(--accent-color);
+            margin-bottom: calc(var(--spacing-unit)/3);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Form Elements */
+        .sidebar-section input[type="text"],
+        .sidebar-section select,
+        .sidebar-section input[type="file"] {
+            width: 100%;
+            padding: calc(var(--spacing-unit) * 0.6);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-input);
+            color: var(--text-light);
+            border-radius: var(--border-radius);
+            font-size: 0.9em;
+            transition: border-color 0.2s ease;
+        }
+
+        .sidebar-section input[type="text"]:focus,
+        .sidebar-section select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .sidebar-section button {
+            width: 100%;
+            background-color: var(--primary-button-bg);
+            color: var(--text-light);
+            padding: calc(var(--spacing-unit) * 0.7) var(--spacing-unit);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-section button:hover:not(:disabled) {
+            background-color: var(--primary-button-hover-bg);
+            transform: translateY(-1px);
+        }
+
+        /* Main Area */
+        .main-content {
+            display: flex;
+            flex-direction: column; /* Stack header, container, input */
+            width: 100%;
+            max-width: var(--main-content-max-width);
+            height: 100vh; /* Take full viewport height */
+            overflow: hidden; /* Prevent main area itself from scrolling */
+            background-color: var(--bg-chat);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-header {
+            flex-shrink: 0; /* Prevent header from shrinking */
+            background-color: var(--bg-dark);
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h2 {
+            font-size: 1.1rem;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        /* Chat Tabs */
+        .chat-tabs {
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-tab {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-light);
+            position: relative;
+        }
+
+        .chat-tab.active {
+            background-color: rgba(110, 86, 207, 0.1);
+            color: var(--accent-color);
+        }
+
+        .chat-tab i {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+        }
+
+        .chat-tab-badge {
+            font-size: 0.7rem;
+            background-color: var(--bg-input);
+            color: var(--text-secondary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        /* Header Actions */
+        .chat-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-action-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+
+        .header-action-button:hover {
+            color: var(--accent-color);
+            background-color: rgba(110, 86, 207, 0.1);
+        }
+
+        /* Rename Form */
+        .rename-form {
+            display: flex;
+            align-items: center;
+        }
+
+        .rename-form.d-none {
+            display: none;
+        }
+
+        .rename-form input {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .rename-form input:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+
+        .rename-submit, .rename-cancel {
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .rename-submit {
+            color: var(--accent-color);
+        }
+
+        .rename-submit:hover {
+            background-color: rgba(110, 86, 207, 0.1);
+        }
+
+        .rename-cancel:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Flash Messages */
+        .flash-messages {
+            position: relative; /* Or adjust if absolutely positioned */
+            z-index: 100;
+            flex-shrink: 0; /* Prevent flash from shrinking */
+            /* Keep other flash styles */
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            flex-grow: 1; /* Allow container to take up remaining space */
+            background-color: transparent;
+            border-radius: 0;
+            padding: calc(var(--spacing-unit) * 1.5);
+            overflow-y: auto; /* Make ONLY this container scrollable */
+            margin-bottom: 0; /* Remove fixed bottom margin, space is handled by wrapper */
+            border: none;
+            /* Use thin scrollbar instead of hiding it */
+            scrollbar-width: thin; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        /* Custom scrollbar for chat container */
+        .chat-container::-webkit-scrollbar {
+            width: 4px;
+            background: transparent;
+        }
+
+        .chat-message {
+            margin-bottom: var(--spacing-unit);
+            padding: calc(var(--spacing-unit)*0.8);
+            border-radius: var(--border-radius);
+            line-height: 1.5;
+            word-wrap: break-word;
+            max-width: 85%;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .user-message {
+            background-color: rgba(110, 86, 207, 0.15);
+            border-color: rgba(110, 86, 207, 0.3);
+            margin-left: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .assistant-message {
+            background-color: rgba(36, 36, 36, 0.5);
+            border-color: var(--border-color);
+            margin-right: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .message-sender {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            margin-bottom: 0.3rem;
+            display: inline-block;
+            font-weight: 500;
+        }
+
+        /* Input Area Wrapper */
+        .chat-input-area {
+            position: relative;
+            bottom: auto;
+            left: auto;
+            right: auto;
+            width: 100%;
+            background: var(--bg-dark);
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 0;
+            flex-shrink: 0;
+            pointer-events: auto;
+            display: flex;
+            gap: 0.5rem;
+            max-width: var(--main-content-max-width);
+            margin: 0 auto;
+            align-items: center;
+        }
+
+        .input-group {
+            background-color: var(--bg-input);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-group:focus-within {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 1px rgba(110, 86, 207, 0.2);
+        }
+
+        #messageInput {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            background-color: transparent;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        #messageInput:focus {
+            outline: none;
+        }
+
+        #messageInput::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        #send-button {
+            white-space: nowrap;
+            background-color: transparent;
+            color: var(--accent-color);
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-right: 0.25rem;
+        }
+
+        #send-button:hover:not(:disabled) {
+            background-color: rgba(110, 86, 207, 0.1);
+            color: var(--primary-button-hover-bg);
+        }
+
+        #send-button:disabled {
+            color: var(--text-secondary);
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #temp-file-upload-button {
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+        }
+
+        #temp-file-upload-button:hover:not(:disabled) {
+            color: var(--accent-color);
+            background-color: rgba(110, 86, 207, 0.1);
+        }
+
+        /* Template Management */
+        .template-section {
+            background-color: var(--bg-card);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-unit);
+            margin-bottom: var(--spacing-unit);
+        }
+
+        .template-controls {
+            display: flex;
+            gap: var(--spacing-unit);
+            margin-top: var(--spacing-unit);
+        }
+
+        .template-controls button {
+            flex: 1;
+        }
+
+        /* Loading States */
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(26, 27, 30, 0.7);
+            z-index: 10;
+            border-radius: var(--border-radius);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 0.9em;
+            text-align: center;
+            padding: 0.5em;
+        }
+
+        /* Chat List Styling */
+        .custom-chat-list {
+            margin-top: 0.5rem;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .chat-list-item {
+            background-color: rgba(45, 46, 50, 0.4);
+            border: 1px solid var(--border-color);
+            margin-bottom: 0.25rem;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+        }
+
+        .chat-list-item:hover {
+            background-color: rgba(45, 46, 50, 0.6);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-list-item a {
+            color: var(--text-light);
+            text-decoration: none;
+            padding: 0.4rem 0.6rem;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+        }
+
+        .chat-list-item a:hover {
+            color: var(--accent-color);
+        }
+
+        .chat-list-item a.active {
+            background-color: rgba(114, 137, 218, 0.2);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .chat-list-empty {
+            background-color: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        /* Delete Button Styling */
+        .delete-button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-button:hover {
+            color: var(--delete-color);
+            background-color: rgba(237, 66, 69, 0.1);
+            opacity: 1;
+        }
+
+        .chat-list-item:hover .delete-button {
+            opacity: 0.8;
+        }
+
+        /* Modal styles for popups */
+        .modal-content {
+            background-color: var(--bg-card);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--text-light);
+        }
+
+        .btn-close {
+            color: var(--text-light);
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* File Management Styles */
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+        }
+
+        .file-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-item .form-check {
+            margin-right: 1rem;
+        }
+
+        .file-item .file-info {
+            flex-grow: 1;
+        }
+
+        .file-item .file-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-item .file-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .file-item .file-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .file-toggle-all {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Agent Notification Styles */
+        .agent-notifications {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .agent-notification-content {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--accent-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .agent-notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: rgba(110, 86, 207, 0.1);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .agent-notification-title {
+            font-weight: 500;
+            color: var(--accent-color);
+        }
+
+        .agent-notification-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .agent-notification-close:hover {
+            color: var(--text-light);
+        }
+
+        .agent-notification-body {
+            padding: 1rem;
+        }
+
+        .agent-notification-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem 1rem;
+        }
+
+        .agent-notification-actions button {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .agent-notification-actions .primary-action {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .agent-notification-actions .primary-action:hover {
+            background-color: var(--primary-button-hover-bg);
+        }
+
+        .agent-notification-actions .secondary-action {
+            background-color: var(--bg-input);
+            color: var(--text-light);
+        }
+
+        .agent-notification-actions .secondary-action:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: fixed;
+                z-index: 1000;
+                height: 100vh; /* Ensure full viewport height on mobile */
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                overflow-y: auto; /* Maintain scrollability on mobile */
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content-wrapper {
+                width: 100%;
+            }
+
+            /* Ensure main content takes full width when sidebar is hidden */
+            .main-content {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .agent-notifications {
+                max-width: 90%;
+                left: 5%;
+                right: 5%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Left Sidebar -->
+            <div class="col-md-3 sidebar" id="sidebar">
+                <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle Sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="sidebar-content">
+        <h2>Agent RAG</h2>
+        <!-- Knowledge Base Section -->
+        <div class="sidebar-section">
+            <div class="section-header">
+                <h3>Knowledge Bases</h3>
+                <button type="button" class="section-add-btn" data-bs-toggle="modal" data-bs-target="#kbModal">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+
+            <!-- KB List -->
+            <div class="kb-list mt-2">
+                <select id="kb-list-select" class="form-select mb-2">
+                    <option value="">-- Select Knowledge Base --</option>
+                    {% for store in vector_stores %}
+                        <option value="{{ store.id }}">{{ store.name }} ({{ store.id[-6:] }})</option>
+                    {% endfor %}
+                </select>
+                <div id="kb-actions" class="d-flex gap-2 mb-2" style="display: none;">
+                    <button id="upload-to-kb-btn" class="btn btn-sm btn-outline-secondary flex-grow-1" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="fas fa-file-upload"></i> Upload Files
+                    </button>
+                </div>
+            </div>
+        </div>
+
+                <!-- Templates Section -->
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h3>Templates</h3>
+                        <button type="button" class="section-add-btn" data-bs-toggle="modal" data-bs-target="#templateModal">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <!-- Template Selection -->
+                    <div class="template-select-group mt-2">
+                        <select id="template-select" name="template_select" class="form-select">
+                            <option value="" selected>-- No Template --</option>
+                            {# Options populated by JS via /list_templates #}
+                        </select>
+                        <div class="d-flex align-items-center mt-2">
+                            <span id="template-status-indicator" class="small text-muted flex-grow-1" style="display: none;"></span>
+                            <button type="button" id="clear-template-button" class="btn btn-sm btn-outline-secondary" title="Clear template selection">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chats Section -->
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h3>Chats</h3>
+                        <button type="button" class="section-add-btn" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <!-- Chat List -->
+                    <ul class="list-group list-group-flush chat-list custom-chat-list mt-2">
+                 {% for chat in chats %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center p-2 chat-list-item"> {# Added chat-list-item class and increased padding #}
+                         <a href="{{ url_for('chat_view', chat_id=chat.id) }}"
+                                    class="list-group-item-action flex-grow-1 {{ 'active' if chat.id == current_chat_id else '' }}" {# Added list-group-item-action class #}
+                            title="{{ chat.title }} (KB: {{ chat.vector_store_id[-6:] }})">
+                             {{ chat.title }}
+                         </a>
+                         <form action="{{ url_for('delete_chat_route', chat_id=chat.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete chat: {{ chat.title | escape }}?');">
+                              <button type="submit" class="delete-button" title="Delete Chat">
+                                  <i class="fas fa-trash-alt"></i></button>
+                         </form>
+                    </li>
+                 {% else %}
+                            <li class="list-group-item text-muted chat-list-empty" style="font-size:0.9em;">No recent chats.</li> {# Added chat-list-empty class #}
+                 {% endfor %}
+            </ul>
+        </div>
+
+                </div> <!-- End sidebar-content -->
+            </div> <!-- End Sidebar col-md-3 -->
+
+    <!-- Main Content Wrapper -->
+            <div class="col-md-9 main-content-wrapper">
+                <!-- Main Chat Area -->
+                <div class="main-content d-flex flex-column"> {# Added flex classes #}
+             <header class="chat-header">
+                    <div class="chat-tabs">
+                        <div class="chat-tab active">
+                            <i class="fas fa-comment-alt"></i>
+                            <span>{{ current_chat_title | default('Agent RAG Chat') }}</span>
+                        </div>
+                 {% if current_chat_id %}
+                            <div class="chat-tab-badge" title="Knowledge Base ID: {{ current_vector_store_id }}">KB: {{ current_vector_store_id[-6:] }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="chat-header-actions">
+                        {% if current_chat_id %}
+                            <button type="button" class="header-action-button" id="manage-files-button" title="Manage KB Files">
+                                <i class="fas fa-file-alt"></i>
+                            </button>
+                            <button type="button" class="header-action-button" id="rename-chat-button" title="Rename Chat">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form class="rename-form d-none gap-2" id="rename-form" action="{{ url_for('rename_chat_route', chat_id=current_chat_id) }}" method="POST">
+                                <input type="text" name="new_title" class="form-control form-control-sm" placeholder="Rename chat..." required value="{{ current_chat_title }}">
+                                <button type="submit" class="btn btn-sm rename-submit">Save</button>
+                                <button type="button" class="btn btn-sm rename-cancel">Cancel</button>
+                     </form>
+                 {% endif %}
+                    </div>
+             </header>
+
+              <!-- Flash Messages -->
+             {% with messages = get_flashed_messages(with_categories=true) %}
+                 {% if messages %}
+                         <ul class="flash-messages list-unstyled px-3"> {# Added padding #}
+                     {% for category, message in messages %}
+                             {# Using Bootstrap alert classes #}
+                             <li class="alert flash-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </li>
+                     {% endfor %}
+                     </ul>
+                 {% endif %}
+             {% endwith %}
+
+                <div class="chat-container flex-grow-1" id="chat-box">
+                <!-- Messages for the currently selected chat -->
+                {% if current_chat_id %}
+                     {% for message in current_chat_messages %}
+                        <div class="chat-message {{ message.role }}-message">
+                            <span class="message-sender">{{ message.role }}</span>
+                            {# Use the safe filter HERE for messages loaded from DB #}
+                            <div class="message-content">{{ message.content | safe }}</div>
+                        </div>
+                     {% else %}
+                         <div class="chat-message assistant-message">
+                             <span class="message-sender">Assistant</span>
+                             <div class="message-content">This chat is empty. Ask a question about the documents in the Knowledge Base ({{ current_vector_store_id[-6:] if current_vector_store_id else 'N/A' }})!</div>
+                         </div>
+                     {% endfor %}
+                {% else %}
+                    <div class="chat-message assistant-message">
+                        <span class="message-sender">Assistant</span>
+                        <div class="message-content">Welcome! Please select a chat from the sidebar or start a new one using a Knowledge Base (KB). You may need to create a KB and upload documents first using the options on the left.</div>
+                    </div>
+                {% endif %}
+            </div>
+
+                 <!-- Input Area -->
+                <div class="chat-input-area p-3"> {# Added padding class #}
+                     <form id="chatForm" class="w-100"> {# Make form take width #}
+                         <div class="input-group">
+                             {# Temp file button #}
+                             <input type="file" id="temp-file-upload-input" accept=".pdf,.txt,.md,.docx" style="display: none;" multiple>
+                             <button class="btn btn-secondary" type="button" id="temp-file-upload-button" title="Attach temporary file(s)" {% if not current_chat_id %}disabled{% endif %}>
+                                 <i class="fas fa-paperclip"></i>
+                             </button>
+                             {# Message input #}
+                             <input type="text" class="form-control" id="messageInput" placeholder="Ask a question or attach file(s)..." {% if not current_chat_id %}disabled{% endif %}>
+                             {# Temp file indicator (simple version) #}
+                              <div id="temp-file-display-list" style="font-size: 0.8em; margin-left: 5px; align-self: center; max-width: 150px; overflow:hidden; white-space: nowrap;"></div>
+                             {# Send Button #}
+                             <button type="submit" class="btn btn-primary" id="send-button" {% if not current_chat_id %}disabled{% endif %}>
+                                 <i class="fas fa-paper-plane"></i> Send
+                             </button>
+                </div>
+                     </form>
+            </div>
+                </div> <!-- End main-content -->
+            </div> <!-- End main-content-wrapper -->
+        </div> <!-- End row -->
+    </div> <!-- End container-fluid -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // --- Sidebar Toggle Functionality ---
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+
+            // Check if sidebar state is stored in localStorage
+            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+            }
+
+            // Toggle sidebar when button is clicked
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                // Store sidebar state in localStorage
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            });
+
+            // --- Chat Header Functionality ---
+            const renameButton = document.getElementById('rename-chat-button');
+            const renameForm = document.getElementById('rename-form');
+            const renameCancelButton = document.querySelector('.rename-cancel');
+            const manageFilesButton = document.getElementById('manage-files-button');
+            const fileManagementModal = new bootstrap.Modal(document.getElementById('fileManagementModal'));
+
+            // Toggle rename form visibility
+            if (renameButton && renameForm) {
+                renameButton.addEventListener('click', () => {
+                    renameForm.classList.remove('d-none');
+                    renameButton.classList.add('d-none');
+                    // Focus the input field
+                    const input = renameForm.querySelector('input');
+                    if (input) {
+                        input.focus();
+                        // Select all text
+                        input.setSelectionRange(0, input.value.length);
+                    }
+                });
+            }
+
+            // Cancel rename action
+            if (renameCancelButton && renameForm && renameButton) {
+                renameCancelButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renameForm.classList.add('d-none');
+                    renameButton.classList.remove('d-none');
+                });
+            }
+
+            // File Management Modal
+            if (manageFilesButton) {
+                manageFilesButton.addEventListener('click', () => {
+                    // Show the modal
+                    fileManagementModal.show();
+                    // Load the files
+                    loadKnowledgeBaseFiles();
+                });
+            }
+
+            // File Management Functions
+            let knowledgeBaseFiles = [];
+            let includedFileIds = [];
+
+            async function loadKnowledgeBaseFiles() {
+                const kbFilesLoading = document.getElementById('kb-files-loading');
+                const kbFilesList = document.getElementById('kb-files-list');
+                const kbFilesEmpty = document.getElementById('kb-files-empty');
+                const kbFilesError = document.getElementById('kb-files-error');
+
+                // Show loading, hide other elements
+                kbFilesLoading.style.display = 'block';
+                kbFilesList.style.display = 'none';
+                kbFilesEmpty.style.display = 'none';
+                kbFilesError.style.display = 'none';
+
+                try {
+                    // Get the current chat ID and vector store ID
+                    const chatId = "{{ current_chat_id }}";
+                    const vectorStoreId = "{{ current_vector_store_id }}";
+
+                    if (!chatId || !vectorStoreId) {
+                        throw new Error('Chat ID or Vector Store ID not found');
+                    }
+
+                    // Fetch the files from the API
+                    const response = await fetch(`/api/kb_files/${vectorStoreId}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to load files');
+                    }
+
+                    const data = await response.json();
+                    knowledgeBaseFiles = data.files || [];
+
+                    // Get the included file IDs for this chat
+                    const chatFilesResponse = await fetch(`/api/chat_files/${chatId}`);
+                    if (chatFilesResponse.ok) {
+                        const chatFilesData = await chatFilesResponse.json();
+                        includedFileIds = chatFilesData.included_file_ids || [];
+                    } else {
+                        // If this fails, assume all files are included
+                        includedFileIds = knowledgeBaseFiles.map(file => file.id);
+                    }
+
+                    // Render the files
+                    renderKnowledgeBaseFiles();
+
+                    // Show the list if there are files, otherwise show empty message
+                    if (knowledgeBaseFiles.length > 0) {
+                        kbFilesList.style.display = 'block';
+                    } else {
+                        kbFilesEmpty.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error loading files:', error);
+                    kbFilesError.style.display = 'block';
+                    kbFilesError.textContent = `Error: ${error.message}`;
+                } finally {
+                    kbFilesLoading.style.display = 'none';
+                }
+            }
+
+            function renderKnowledgeBaseFiles() {
+                const kbFilesList = document.getElementById('kb-files-list');
+                kbFilesList.innerHTML = '';
+
+                // Add toggle all section
+                const toggleAllDiv = document.createElement('div');
+                toggleAllDiv.className = 'file-toggle-all';
+                toggleAllDiv.innerHTML = `
+                    <div>
+                        <strong>Files in Knowledge Base (${knowledgeBaseFiles.length})</strong>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" id="select-all-files">Select All</button>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" id="deselect-all-files">Deselect All</button>
+                    </div>
+                `;
+                kbFilesList.appendChild(toggleAllDiv);
+
+                // Add event listeners for toggle buttons
+                document.getElementById('select-all-files').addEventListener('click', () => {
+                    includedFileIds = knowledgeBaseFiles.map(file => file.id);
+                    renderKnowledgeBaseFiles();
+                });
+
+                document.getElementById('deselect-all-files').addEventListener('click', () => {
+                    includedFileIds = [];
+                    renderKnowledgeBaseFiles();
+                });
+
+                // Add each file
+                knowledgeBaseFiles.forEach(file => {
+                    const isIncluded = includedFileIds.includes(file.id);
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="form-check">
+                            <input class="form-check-input file-checkbox" type="checkbox" value="${file.id}" id="file-${file.id}" ${isIncluded ? 'checked' : ''}>
+                        </div>
+                        <div class="file-info">
+                            <div class="file-name">${file.filename || 'Unnamed File'}</div>
+                            <div class="file-meta">
+                                ${file.metadata ? `Type: ${file.metadata.document_type || 'Unknown'} | ` : ''}
+                                ${file.created_at ? `Added: ${new Date(file.created_at).toLocaleDateString()}` : ''}
+                            </div>
+                        </div>
+                    `;
+                    kbFilesList.appendChild(fileItem);
+
+                    // Add event listener for checkbox
+                    const checkbox = fileItem.querySelector('.file-checkbox');
+                    checkbox.addEventListener('change', (e) => {
+                        if (e.target.checked) {
+                            if (!includedFileIds.includes(file.id)) {
+                                includedFileIds.push(file.id);
+                            }
+                        } else {
+                            includedFileIds = includedFileIds.filter(id => id !== file.id);
+                        }
+                    });
+                });
+            }
+
+            // Save file selection
+            const saveFileSelectionButton = document.getElementById('save-file-selection');
+            if (saveFileSelectionButton) {
+                saveFileSelectionButton.addEventListener('click', async () => {
+                    try {
+                        const chatId = "{{ current_chat_id }}";
+
+                        // Show loading state
+                        saveFileSelectionButton.disabled = true;
+                        saveFileSelectionButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+
+                        // Send the included file IDs to the server
+                        const response = await fetch(`/api/chat_files/${chatId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                included_file_ids: includedFileIds
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to save file selection');
+                        }
+
+                        // Close the modal
+                        fileManagementModal.hide();
+
+                        // Show success message
+                        addMessage('assistant', '<p>File selection updated. Future responses will only use the selected files.</p>');
+                    } catch (error) {
+                        console.error('Error saving file selection:', error);
+                        alert(`Error: ${error.message}`);
+                    } finally {
+                        // Reset button state
+                        saveFileSelectionButton.disabled = false;
+                        saveFileSelectionButton.innerHTML = 'Apply Changes';
+                    }
+                });
+            }
+
+            // --- Element References ---
+            const createKbForm = document.getElementById('create-kb-form');
+            const createKbLoading = document.getElementById('create-kb-loading');
+            const createKbButton = document.getElementById('create-kb-button');
+            const kbListSelect = document.getElementById('kb-list-select');
+            const kbActions = document.getElementById('kb-actions');
+
+            // KB List Selection Logic
+            if (kbListSelect) {
+                kbListSelect.addEventListener('change', () => {
+                    if (kbListSelect.value) {
+                        kbActions.style.display = 'flex';
+                    } else {
+                        kbActions.style.display = 'none';
+                    }
+                });
+            }
+            const uploadForm = document.getElementById('upload-form');
+            const uploadLoading = document.getElementById('upload-loading');
+            const uploadButton = document.getElementById('upload-button-metadata'); // Updated ID
+            const fileInput = document.getElementById('pdf_files_upload');
+            const fileNamesList = document.getElementById('selected-files-list-detailed'); // Updated ID
+            const chatBox = document.getElementById('chat-box');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('send-button');
+            const currentChatId = "{{ current_chat_id | default('') }}";
+
+            // Temporary file upload elements
+            const tempFileInput = document.getElementById('temp-file-upload-input');
+            const tempFileButton = document.getElementById('temp-file-upload-button');
+            const tempFileDisplayList = document.getElementById('temp-file-display-list');
+            const chatForm = document.getElementById('chatForm');
+
+            // --- Add template element references ---
+            const templateSelect = document.getElementById('template-select');
+            const useTemplateButton = document.getElementById('use-template-button');
+            const templateStatusIndicator = document.getElementById('template-status-indicator');
+            const templateInUseIndicator = document.getElementById('template-in-use-indicator');
+            const activeTemplateNameSpan = document.getElementById('active-template-name');
+            const clearTemplateButton = document.getElementById('clear-template-button');
+
+            let activeTemplateName = null; // Variable to hold selected template
+
+            // --- Loading Indicators ---
+             function showLoading(overlayElement, buttonElement) {
+                 if (overlayElement) overlayElement.style.display = 'flex';
+                 if (buttonElement) buttonElement.disabled = true;
+            }
+             function hideLoading(overlayElement, buttonElement) {
+                if (overlayElement) overlayElement.style.display = 'none';
+                if (buttonElement) buttonElement.disabled = false;
+            }
+
+            // --- Form Submit Listeners for Loading ---
+            if (createKbForm && createKbLoading && createKbButton) {
+                createKbForm.addEventListener('submit', (e) => {
+                    const nameInput = createKbForm.querySelector('input[name=store_name]');
+                    if (nameInput && nameInput.value.trim()) { showLoading(createKbLoading, createKbButton); }
+                 });
+            }
+             if (uploadForm && uploadLoading && uploadButton && fileInput) {
+                 uploadForm.addEventListener('submit', (e) => {
+                     const kbSelect = uploadForm.querySelector('select[name=vector_store_id]');
+                     if (fileInput.files.length > 0 && kbSelect && kbSelect.value) { showLoading(uploadLoading, uploadButton); }
+                 });
+                  fileInput.addEventListener('change', () => {
+                      if (!fileNamesList) return;
+                      fileNamesList.innerHTML = '';
+                      if (fileInput.files.length > 0) {
+                           // Create metadata inputs for each file
+                           Array.from(fileInput.files).forEach(file => {
+                               const fileContainer = document.createElement('div');
+                               fileContainer.className = 'file-metadata-container mb-3 p-2 border rounded';
+
+                               const fileHeader = document.createElement('h6');
+                               fileHeader.className = 'mb-2';
+                               fileHeader.textContent = file.name;
+                               fileContainer.appendChild(fileHeader);
+
+                               // Document Type
+                               const typeGroup = document.createElement('div');
+                               typeGroup.className = 'mb-2';
+                               typeGroup.innerHTML = `
+                                   <label class="form-label small">Document Type:</label>
+                                   <select class="form-select form-select-sm metadata-field" data-field="document_type" data-file="${file.name}">
+                                       <option value="general">General</option>
+                                   <option value="contract">Contract</option>
+                                   <option value="report">Report</option>
+                                       <option value="manual">Manual</option>
+                                   </select>
+                               `;
+                               fileContainer.appendChild(typeGroup);
+
+                               // Language
+                               const langGroup = document.createElement('div');
+                               langGroup.className = 'mb-2';
+                               langGroup.innerHTML = `
+                                   <label class="form-label small">Language:</label>
+                                   <select class="form-select form-select-sm metadata-field" data-field="language" data-file="${file.name}">
+                                       <option value="english">English</option>
+                                       <option value="french">French</option>
+                                       <option value="spanish">Spanish</option>
+                                       <option value="german">German</option>
+                                       <option value="other">Other</option>
+                                   </select>
+                               `;
+                               fileContainer.appendChild(langGroup);
+
+                               // Category (optional)
+                               const catGroup = document.createElement('div');
+                               catGroup.className = 'mb-2';
+                               catGroup.innerHTML = `
+                                   <label class="form-label small">Category (optional):</label>
+                                   <input type="text" class="form-control form-control-sm metadata-field" data-field="category" data-file="${file.name}" placeholder="e.g. HR, Finance, etc.">
+                               `;
+                               fileContainer.appendChild(catGroup);
+
+                               fileNamesList.appendChild(fileContainer);
+                           });
+                      }
+                   });
+             }
+             window.addEventListener('pageshow', (event) => {
+                  hideLoading(createKbLoading, createKbButton);
+                  hideLoading(uploadLoading, uploadButton);
+              });
+
+            // --- Chat Functions ---
+            // Expects HTML content for assistant, plain text for user
+            function addMessage(sender, content, sources = [], isLoading = false) {
+                 if (!chatBox) return null;
+                 const messageDiv = document.createElement('div');
+                 messageDiv.classList.add('chat-message', `${sender}-message`);
+                 if (isLoading) messageDiv.classList.add('loading-indicator');
+
+                 const senderSpan = document.createElement('span');
+                 senderSpan.classList.add('message-sender');
+                 senderSpan.textContent = sender;
+
+                 const contentDiv = document.createElement('div');
+                 contentDiv.classList.add('message-content');
+
+                 if (sender === 'assistant') {
+                    // Set innerHTML for assistant messages (backend sends HTML)
+                    contentDiv.innerHTML = content;
+                 } else {
+                    // Set textContent for user messages (plain text)
+                    contentDiv.textContent = content;
+                 }
+
+                 messageDiv.appendChild(senderSpan);
+                 messageDiv.appendChild(contentDiv);
+
+                 // Render sources (logic remains the same)
+                 if (sources && sources.length > 0 && sender === 'assistant' && !isLoading) {
+                     const sourcesContainer = document.createElement('details');
+                     sourcesContainer.classList.add('sources-container');
+                     sourcesContainer.open = false;
+                     const summary = document.createElement('summary');
+                     summary.textContent = `Sources (${sources.length})`;
+                     sourcesContainer.appendChild(summary);
+                     sources.forEach(source => {
+                         const itemDiv = document.createElement('div'); itemDiv.classList.add('source-item');
+                         const title = document.createElement('strong');
+                         title.textContent = `📄 ${source.filename || 'Unknown Source'}`;
+                         if(source.score !== null && source.score !== undefined) {
+                              const scoreValue = parseFloat(source.score);
+                              if (!isNaN(scoreValue)) { title.textContent += ` (Score: ${scoreValue.toFixed(2)})`; }
+                              else { title.textContent += ` (Score: N/A)`; }
+                         }
+                         itemDiv.appendChild(title);
+                         const contentPre = document.createElement('pre');
+                         contentPre.textContent = source.content || 'No preview.';
+                         itemDiv.appendChild(contentPre);
+                         sourcesContainer.appendChild(itemDiv);
+                     });
+                     messageDiv.appendChild(sourcesContainer);
+                 }
+
+                 chatBox.appendChild(messageDiv);
+                 // Ensure smooth scrolling to bottom with a slight delay to account for content rendering
+                 requestAnimationFrame(() => {
+                     if (chatBox) {
+                         // Use smooth scrolling for better UX
+                         chatBox.scrollTo({
+                             top: chatBox.scrollHeight,
+                             behavior: 'smooth'
+                         });
+                     }
+                 });
+                 return messageDiv;
+            }
+
+            // --- Function to update template status display ---
+            function updateTemplateStatusUI() {
+                // Get the current template selection directly from the select element
+                const currentTemplate = templateSelect ? templateSelect.value : null;
+
+                if (currentTemplate) {
+                    // A template is selected
+                    if (activeTemplateNameSpan) activeTemplateNameSpan.textContent = currentTemplate.split('.')[0].replace(/_/g, ' '); // Show cleaner name
+                    if (templateInUseIndicator) templateInUseIndicator.style.display = 'flex';
+                    if (templateStatusIndicator) {
+                        templateStatusIndicator.textContent = `Using template: ${currentTemplate}`;
+                        templateStatusIndicator.style.display = 'block';
+                    }
+                    if (messageInput) messageInput.placeholder = `Provide details for template: ${currentTemplate.split('.')[0]}...`;
+                } else {
+                    // No template selected
+                    if (templateInUseIndicator) templateInUseIndicator.style.display = 'none';
+                    if (templateStatusIndicator) templateStatusIndicator.style.display = 'none';
+                    if (messageInput) messageInput.placeholder = 'Ask a question, or attach file...';
+                }
+            }
+
+            // --- Template Selection Logic ---
+            if (templateSelect) {
+                // Update UI when template selection changes
+                templateSelect.addEventListener('change', () => {
+                    console.log("Template selection changed to:", templateSelect.value);
+                    updateTemplateStatusUI();
+                });
+            }
+
+            if (clearTemplateButton) {
+                clearTemplateButton.addEventListener('click', () => {
+                    if (templateSelect) templateSelect.value = "";
+                    updateTemplateStatusUI();
+                    console.log("Template selection cleared.");
+                });
+            }
+
+            // --- Modified sendChatMessage to include template info and agent system ---
+            async function sendChatMessage() {
+                if (!messageInput || !sendButton || !chatBox || !currentChatId) { console.error("Chat UI missing."); return; }
+                const messageText = messageInput.value.trim();
+
+                // Get template directly from the select element instead of using activeTemplateName
+                const templateNameToUse = templateSelect.value;
+                console.log("Template selected in UI:", templateNameToUse);
+
+                if (!messageText && !templateNameToUse) { console.warn("No message or template selected."); return; }
+
+                // Add user message (adjust if only template is selected)
+                let userDisplayMessage = messageText;
+                if (!userDisplayMessage && templateNameToUse) {
+                    userDisplayMessage = `(Populating template: ${templateNameToUse})`;
+                } else if (userDisplayMessage && templateNameToUse) {
+                    userDisplayMessage += ` (Using template: ${templateNameToUse})`;
+                }
+
+                console.log("User display message:", userDisplayMessage);
+                addMessage('user', userDisplayMessage);
+
+                const userMsgTextForApi = messageText;
+                messageInput.value = '';
+
+                // Don't clear template selection at all - keep it active for the entire conversation
+                // This allows the template to be used for multiple messages
+
+                sendButton.disabled = true;
+                if (useTemplateButton) useTemplateButton.disabled = true;
+                if (templateSelect) templateSelect.disabled = true;
+                let thinkingIndicator = null;
+
+                // Process message with agent system first if there's actual text content
+                if (messageText) {
+                    try {
+                        // Get the current vector store ID
+                        const vectorStoreId = "{{ current_vector_store_id }}";
+
+                        // Process the message with the agent system
+                        await processAgentRecommendations(messageText, currentChatId, vectorStoreId);
+                    } catch (agentError) {
+                        console.error('Error processing with agent system:', agentError);
+                        // Continue with normal processing even if agent system fails
+                    }
+                }
+
+                try {
+                    thinkingIndicator = addMessage('assistant', '...', [], true);
+                    const apiUrl = `{{ url_for('chat_api', chat_id='__CHAT_ID__') }}`.replace('__CHAT_ID__', currentChatId);
+
+                    const formData = new FormData();
+                    formData.append('message', userMsgTextForApi);
+
+                    // Add template if selected - with explicit logging
+                    if (templateNameToUse) {
+                        formData.append('template_to_populate', templateNameToUse);
+                        console.log("Appending template_to_populate to FormData:", templateNameToUse);
+                    } else {
+                        console.log("No template selected, not appending template_to_populate.");
+                    }
+
+                    // Debug: Log all form data being sent
+                    for (let pair of formData.entries()) {
+                        console.log(pair[0] + ': ' + pair[1]);
+                    }
+
+                    // Add temporary files if selected
+                    if (tempFileInput && tempFileInput.files.length > 0) {
+                        Array.from(tempFileInput.files).forEach(file => {
+                            formData.append('temporary_files[]', file);
+                            console.log("Attaching temporary file:", file.name);
+                        });
+
+                        // Reset temp file input after sending
+                        tempFileInput.value = '';
+                        if (tempFileDisplayList) tempFileDisplayList.textContent = '';
+                        if (tempFileButton) {
+                            tempFileButton.classList.remove('btn-success');
+                            tempFileButton.classList.add('btn-secondary');
+                        }
+                    }
+
+                    const response = await fetch(apiUrl, { method: 'POST', body: formData });
+                    if (thinkingIndicator && thinkingIndicator.parentNode === chatBox) { chatBox.removeChild(thinkingIndicator); }
+                    if (!response.ok) {
+                        let errorText = `Server error: ${response.status}`;
+                        try { const errData = await response.json(); errorText = errData.error || errorText; } catch(e){}
+                        throw new Error(errorText);
+                    }
+                    const data = await response.json();
+                    if (data && data.response) {
+                        addMessage('assistant', data.response, data.retrieved_sources || []);
+                    } else {
+                        addMessage('assistant', "<p>Unexpected response.</p>");
+                    }
+                } catch (error) {
+                    console.error('Chat Error:', error);
+                    if (thinkingIndicator && thinkingIndicator.parentNode === chatBox) { chatBox.removeChild(thinkingIndicator); }
+                    addMessage('assistant', `<p>Error: ${error.message || 'Failed to get response'}</p>`);
+                } finally {
+                    if (sendButton) sendButton.disabled = false;
+
+                    // Don't clear template selection - keep it active
+                    // Only re-enable the controls
+                    if (templateSelect) templateSelect.disabled = false;
+                    if (useTemplateButton) useTemplateButton.disabled = false;
+
+                    // Update UI to show the active template (if any)
+                    updateTemplateStatusUI();
+
+                    if (messageInput) messageInput.focus();
+                }
+            }
+
+            // --- Add form submit handler with metadata collection ---
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    // Collect metadata from inputs
+                    const allMetadata = {};
+                    document.querySelectorAll('.metadata-field').forEach(field => {
+                        const fieldName = field.dataset.field;
+                        const fileName = field.dataset.file;
+                        const fieldValue = field.value.trim();
+
+                        if (!allMetadata[fileName]) {
+                            allMetadata[fileName] = {};
+                        }
+
+                        if (fieldValue) {
+                            allMetadata[fileName][fieldName] = fieldValue;
+                        }
+                    });
+
+                    // Add metadata as hidden field
+                    let metadataInput = uploadForm.querySelector('input[name="metadata"]');
+                    if (!metadataInput) {
+                        metadataInput = document.createElement('input');
+                        metadataInput.type = 'hidden';
+                        metadataInput.name = 'metadata';
+                        uploadForm.appendChild(metadataInput);
+                    }
+                    metadataInput.value = JSON.stringify(allMetadata);
+
+                    // Show loading and submit
+                    showLoading(uploadLoading, uploadButton);
+                    uploadForm.submit();
+                });
+            }
+
+            // --- Temporary File Upload Handling ---
+            if (tempFileButton && tempFileInput) {
+                tempFileButton.addEventListener('click', () => {
+                    tempFileInput.click();
+                });
+
+                tempFileInput.addEventListener('change', () => {
+                    if (tempFileInput.files.length > 0) {
+                        // Update display
+                        tempFileDisplayList.textContent = `${tempFileInput.files.length} file(s) selected`;
+                        tempFileButton.classList.add('btn-success');
+                        tempFileButton.classList.remove('btn-secondary');
+                    } else {
+                        tempFileDisplayList.textContent = '';
+                        tempFileButton.classList.remove('btn-success');
+                        tempFileButton.classList.add('btn-secondary');
+                    }
+                });
+            }
+
+            // --- Event Listeners ---
+            if (chatForm) {
+                chatForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    sendChatMessage();
+                });
+            }
+
+            if (messageInput) {
+                messageInput.addEventListener('keypress', function(event) {
+                     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage(); }
+                });
+            }
+
+            // Initial Scroll - with a slight delay to ensure all content is rendered
+            if(chatBox) {
+                setTimeout(() => {
+                    chatBox.scrollTo({
+                        top: chatBox.scrollHeight,
+                        behavior: 'auto' // Use 'auto' for initial load to avoid animation on page load
+                    });
+                }, 100);
+            }
+
+        }); // End DOMContentLoaded
+
+        // Template Management Functions
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/list_templates');
+                const templates = await response.json();
+
+                // Populate the template select dropdown
+                const templateSelect = document.getElementById('template-select');
+                if (templateSelect) {
+                    // Keep the default option
+                    const defaultOption = templateSelect.querySelector('option[value=""]');
+                    templateSelect.innerHTML = '';
+                    if (defaultOption) templateSelect.appendChild(defaultOption);
+
+                    // Add template options
+                    templates.forEach(template => {
+                        const option = document.createElement('option');
+                        option.value = template.filename;
+                        option.textContent = template.title || template.filename;
+                        templateSelect.appendChild(option);
+                    });
+                }
+
+                console.log(`Loaded ${templates.length} templates`);
+            } catch (error) {
+                console.error('Error loading templates:', error);
+            }
+        }
+
+        function useTemplate(filename) {
+            document.getElementById('messageInput').value = `(Populating template: ${filename})`;
+            document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+        }
+
+        // Template Upload Form Handler
+        document.addEventListener('DOMContentLoaded', () => {
+            const templateUploadForm = document.getElementById('templateUploadForm');
+            const templateUploadLoading = document.getElementById('template-upload-loading');
+            const templateUploadButton = document.getElementById('template-upload-button');
+
+            if (templateUploadForm) {
+                templateUploadForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    // Show loading
+                    if (templateUploadLoading) templateUploadLoading.style.display = 'flex';
+                    if (templateUploadButton) templateUploadButton.disabled = true;
+
+                    const formData = new FormData();
+                    formData.append('title', document.getElementById('templateTitle').value);
+                    formData.append('description', document.getElementById('templateDescription').value);
+                    formData.append('file', document.getElementById('templateFile').files[0]);
+
+                    try {
+                        const response = await fetch('/upload_template', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            // Clear form
+                            templateUploadForm.reset();
+                            // Reload templates
+                            await loadTemplates();
+                            // Show success message in a Bootstrap toast or alert
+                            const alertDiv = document.createElement('div');
+                            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                            alertDiv.innerHTML = `
+                                Template uploaded successfully!
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            `;
+                            templateUploadForm.prepend(alertDiv);
+                            // Auto-dismiss after 3 seconds
+                            setTimeout(() => {
+                                if (alertDiv.parentNode) alertDiv.parentNode.removeChild(alertDiv);
+                            }, 3000);
+                        } else {
+                            throw new Error('Upload failed');
+                        }
+                    } catch (error) {
+                        console.error('Error uploading template:', error);
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            Error uploading template. Please try again.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        templateUploadForm.prepend(alertDiv);
+                    } finally {
+                        // Hide loading
+                        if (templateUploadLoading) templateUploadLoading.style.display = 'none';
+                        if (templateUploadButton) templateUploadButton.disabled = false;
+                    }
+                });
+            }
+        });
+
+        // Initialize templates on page load
+        document.addEventListener('DOMContentLoaded', loadTemplates);
+
+        // --- Agent Notification Functions ---
+        function showAgentNotification(message, actions = []) {
+            const notificationContainer = document.getElementById('agent-notifications');
+            const messageElement = document.getElementById('agent-notification-message');
+            const actionsContainer = document.getElementById('agent-notification-actions');
+
+            // Set the message
+            messageElement.textContent = message;
+
+            // Clear previous actions
+            actionsContainer.innerHTML = '';
+
+            // Add action buttons
+            if (actions && actions.length > 0) {
+                actions.forEach(action => {
+                    const button = document.createElement('button');
+                    button.textContent = action.text;
+                    button.className = action.primary ? 'primary-action' : 'secondary-action';
+                    button.onclick = () => {
+                        if (action.callback) action.callback();
+                        dismissAgentNotification();
+                    };
+                    actionsContainer.appendChild(button);
+                });
+            }
+
+            // Show the notification
+            notificationContainer.style.display = 'block';
+
+            // Auto-dismiss after 10 seconds if no actions
+            if (!actions || actions.length === 0) {
+                setTimeout(dismissAgentNotification, 10000);
+            }
+        }
+
+        function dismissAgentNotification() {
+            const notificationContainer = document.getElementById('agent-notifications');
+            notificationContainer.style.display = 'none';
+        }
+
+        // Function to process agent recommendations
+        async function processAgentRecommendations(message, chatId, kbId) {
+            try {
+                const response = await fetch('/api/agent/process_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        chat_id: chatId,
+                        kb_id: kbId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to process message with agent system');
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const recommendations = result.recommendations || {};
+
+                    // Handle template suggestions
+                    if (recommendations.template && recommendations.template.suggestion) {
+                        const suggestion = recommendations.template.suggestion;
+                        if (suggestion.type === 'alternative_templates' && suggestion.alternatives) {
+                            showAgentNotification(suggestion.message, [
+                                {
+                                    text: `Use ${suggestion.alternatives[0]}`,
+                                    primary: true,
+                                    callback: () => selectTemplate(suggestion.alternatives[0])
+                                },
+                                {
+                                    text: 'Ignore',
+                                    primary: false
+                                }
+                            ]);
+                        } else if (suggestion.type === 'best_template' && suggestion.template_id) {
+                            showAgentNotification(suggestion.message, [
+                                {
+                                    text: `Use ${suggestion.template_id}`,
+                                    primary: true,
+                                    callback: () => selectTemplate(suggestion.template_id)
+                                },
+                                {
+                                    text: 'Ignore',
+                                    primary: false
+                                }
+                            ]);
+                        }
+                    }
+
+                    // Handle KB suggestions
+                    if (recommendations.kb && recommendations.kb.suggestion) {
+                        const suggestion = recommendations.kb.suggestion;
+                        if (suggestion.type === 'select_kb' && suggestion.best_kb) {
+                            showAgentNotification('You need to select a knowledge base. ' + suggestion.message, [
+                                {
+                                    text: `Use suggested KB`,
+                                    primary: true,
+                                    callback: () => selectKnowledgeBase(suggestion.best_kb.kb_id)
+                                },
+                                {
+                                    text: 'Ignore',
+                                    primary: false
+                                }
+                            ]);
+                        } else if (suggestion.type === 'kb_empty') {
+                            showAgentNotification(suggestion.message, [
+                                {
+                                    text: 'Upload Files',
+                                    primary: true,
+                                    callback: () => openUploadModal(kbId)
+                                },
+                                {
+                                    text: 'Ignore',
+                                    primary: false
+                                }
+                            ]);
+                        } else if (suggestion.type === 'kb_not_found' || suggestion.type === 'need_kb_for_question') {
+                            showAgentNotification(suggestion.message);
+                        }
+                    }
+
+                    // Handle file filtering recommendations
+                    if (recommendations.file_filter && recommendations.file_filter.type === 'suggested_files') {
+                        showAgentNotification(recommendations.file_filter.message, [
+                            {
+                                text: 'Apply Filter',
+                                primary: true,
+                                callback: () => applyFileFilter(recommendations.file_filter.included_file_ids)
+                            },
+                            {
+                                text: 'Ignore',
+                                primary: false
+                            }
+                        ]);
+                    }
+                }
+
+                return result;
+            } catch (error) {
+                console.error('Error processing agent recommendations:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Helper functions for agent actions
+        function selectTemplate(templateId) {
+            const templateSelect = document.getElementById('template-select');
+            if (templateSelect) {
+                templateSelect.value = templateId;
+                // Trigger change event
+                const event = new Event('change');
+                templateSelect.dispatchEvent(event);
+            }
+        }
+
+        function selectKnowledgeBase(kbId) {
+            const kbSelect = document.getElementById('kb-list-select');
+            if (kbSelect) {
+                kbSelect.value = kbId;
+                // Trigger change event
+                const event = new Event('change');
+                kbSelect.dispatchEvent(event);
+            }
+        }
+
+        function openUploadModal(kbId) {
+            const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
+            const kbSelect = document.getElementById('vector_store_id_upload');
+            if (kbSelect && kbId) {
+                kbSelect.value = kbId;
+            }
+            uploadModal.show();
+        }
+
+        function applyFileFilter(fileIds) {
+            // This would need to be implemented based on your file filtering UI
+            console.log('Applying file filter for IDs:', fileIds);
+            // For now, just show a notification that this would be applied
+            showAgentNotification(`File filter applied for ${fileIds.length} files`);
+        }
+    </script>
+
+    <!-- Modal Popups -->
+    <!-- KB Creation Modal -->
+    <div class="modal fade" id="kbModal" tabindex="-1" aria-labelledby="kbModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="kbModalLabel">Create New Knowledge Base</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-kb-form" action="{{ url_for('create_vector_store_route') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="new_kb_name" class="form-label">Knowledge Base Name</label>
+                            <input type="text" class="form-control" id="new_kb_name" name="store_name" placeholder="Enter KB name" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" id="create-kb-button" class="btn btn-primary">Create Knowledge Base</button>
+                        </div>
+                    </form>
+                    <div class="loading-overlay" id="create-kb-loading" style="display: none;">Creating...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Files Modal -->
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadModalLabel">Upload Files to Knowledge Base</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="upload-form" action="{{ url_for('upload_to_store_route') }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="vector_store_id_upload" class="form-label">Select Knowledge Base</label>
+                            <select name="vector_store_id" id="vector_store_id_upload" required class="form-select">
+                                <option value="">-- Select KB --</option>
+                                {% for store in vector_stores %}
+                                    <option value="{{ store.id }}">{{ store.name }} ({{ store.id[-6:] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pdf_files_upload" class="form-label">Select PDF Files</label>
+                            <input type="file" class="form-control" name="pdf_files[]" id="pdf_files_upload" accept=".pdf" required multiple>
+                            <ul id="selected-files-list-detailed" class="mt-3"></ul>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" id="upload-button-metadata" class="btn btn-primary">Upload Files</button>
+                        </div>
+                    </form>
+                    <div class="loading-overlay" id="upload-loading" style="display: none;">Uploading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Upload Modal -->
+    <div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templateModalLabel">Upload New Template</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="templateUploadForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="templateTitle" class="form-label">Template Title</label>
+                            <input type="text" class="form-control" id="templateTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="templateDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="templateDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="templateFile" class="form-label">File (.txt, .md, .pdf)</label>
+                            <input type="file" class="form-control" id="templateFile" accept=".txt,.md,.pdf" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" id="template-upload-button" class="btn btn-primary">Upload Template</button>
+                        </div>
+                    </form>
+                    <div class="loading-overlay" id="template-upload-loading" style="display: none;">Uploading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Chat Modal -->
+    <div class="modal fade" id="newChatModal" tabindex="-1" aria-labelledby="newChatModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newChatModalLabel">Start New Chat</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('new_chat_route') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="vector_store_id_new_chat" class="form-label">Select Knowledge Base</label>
+                            <select name="vector_store_id" id="vector_store_id_new_chat" required class="form-select">
+                                <option value="">-- Select KB --</option>
+                                {% for store in vector_stores %}
+                                    <option value="{{ store.id }}">{{ store.name }} ({{ store.id[-6:] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Create New Chat</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Management Modal -->
+    <div class="modal fade" id="fileManagementModal" tabindex="-1" aria-labelledby="fileManagementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fileManagementModalLabel">Manage Knowledge Base Files</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="file-management-container">
+                        <div class="mb-3">
+                            <p class="text-muted">Select which files to include in this conversation's context. Files that are excluded will not be used when generating responses.</p>
+                        </div>
+
+                        <div id="kb-files-loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading files...</p>
+                        </div>
+
+                        <div id="kb-files-list" class="list-group" style="display: none;">
+                            <!-- Files will be populated here via JavaScript -->
+                        </div>
+
+                        <div id="kb-files-empty" class="alert alert-info" style="display: none;">
+                            No files found in this knowledge base.
+                        </div>
+
+                        <div id="kb-files-error" class="alert alert-danger" style="display: none;">
+                            Error loading files. Please try again.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="save-file-selection">Apply Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Notifications -->
+    <div id="agent-notifications" class="agent-notifications" style="display: none;">
+        <div class="agent-notification-content">
+            <div class="agent-notification-header">
+                <span class="agent-notification-title">Agent Notification</span>
+                <button type="button" class="agent-notification-close" onclick="dismissAgentNotification()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="agent-notification-body">
+                <p id="agent-notification-message"></p>
+            </div>
+            <div class="agent-notification-actions" id="agent-notification-actions">
+                <!-- Action buttons will be added dynamically -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

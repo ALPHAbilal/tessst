@@ -1,0 +1,253 @@
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://192.168.100.215:5001
+2025-04-21 20:35:55,126 [INFO] werkzeug:97: Press CTRL+C to quit
+2025-04-21 20:36:01,545 [INFO] __main__:98: OpenAI client (re)initialized.
+2025-04-21 20:36:01,546 [INFO] __main__:128: Refreshing vector stores from OpenAI...
+2025-04-21 20:36:03,107 [INFO] httpx:1025: HTTP Request: GET https://api.openai.com/v1/vector_stores?limit=50&order=desc "HTTP/1.1 200 OK"
+2025-04-21 20:36:03,247 [INFO] __main__:132: Refreshed VS list: 38 VS.
+2025-04-21 20:36:03,320 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:03] "GET / HTTP/1.1" 200 -2025-04-21 20:36:03,708 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:03] "GET /list_templates HTTP/1.1" 200 -
+2025-04-21 20:36:04,046 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:04] "GET /favicon.ico HTTP/1.1" 404 -
+2025-04-21 20:36:13,956 [INFO] chat_db:116: Created new chat with ID: 278b66f8-994f-4fe2-8d9f-7eca83d28cf4
+2025-04-21 20:36:13,966 [INFO] __main__:1845: Created chat 278b66f8-994f-4fe2-8d9f-7eca83d28cf4 for VS vs_67fc358395d481919b4d9569eed0d2ef
+2025-04-21 20:36:13,969 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:13] "POST /new_chat HTTP/1.1" 302 -
+2025-04-21 20:36:14,029 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:14] "GET /chat_view/278b66f8-994f-4fe2-8d9f-7eca83d28cf4 HTTP/1.1" 200 -
+2025-04-21 20:36:14,166 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:14] "GET /list_templates HTTP/1.1" 200 -
+2025-04-21 20:36:36,717 [INFO] httpx:1025: HTTP Request: GET https://api.openai.com/v1/vector_stores/vs_67fc358395d481919b4d9569eed0d2ef/files "HTTP/1.1 200 OK"
+2025-04-21 20:36:36,725 [INFO] __main__:1944: Vector store file object attributes: ['__abstractmethods__', '__annotations__', '__class__', '__class_getitem__', '__class_vars__', '__copy__', '__deepcopy__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__fields__', '__fields_set__', '__format__', '__ge__', '__get_pydantic_core_schema__', '__get_pydantic_json_schema__', '__getattr__', '__getattribute__', '__getstate__', 
+'__gt__', '__hash__', '__init__', '__init_subclass__', '__iter__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__pretty__', '__private_attributes__', '__pydantic_complete__', '__pydantic_computed_fields__', '__pydantic_core_schema__', '__pydantic_custom_init__', '__pydantic_decorators__', '__pydantic_extra__', '__pydantic_fields__', '__pydantic_fields_set__', '__pydantic_generic_metadata__', '__pydantic_init_subclass__', '__pydantic_parent_namespace__', '__pydantic_post_init__', '__pydantic_private__', '__pydantic_root_model__', '__pydantic_serializer__', '__pydantic_setattr_handlers__', '__pydantic_validator__', '__reduce__', '__reduce_ex__', '__replace__', '__repr__', '__repr_args__', '__repr_name__', '__repr_recursion__', '__repr_str__', 
+'__rich_repr__', '__setattr__', '__setstate__', '__sizeof__', '__slots__', '__str__', '__subclasshook__', '__weakref__', '_abc_impl', '_calculate_keys', '_copy_and_set_values', '_get_value', '_iter', '_setattr_handler', 'attributes', 'chunking_strategy', 'construct', 'copy', 'created_at', 'dict', 'from_orm', 'id', 'json', 'last_error', 'model_computed_fields', 'model_config', 'model_construct', 'model_copy', 'model_dump', 'model_dump_json', 'model_extra', 'model_fields', 'model_fields_set', 'model_json_schema', 'model_parametrized_name', 'model_post_init', 'model_rebuild', 'model_validate', 'model_validate_json', 'model_validate_strings', 'object', 'parse_file', 'parse_obj', 'parse_raw', 'schema', 'schema_json', 'status', 'to_dict', 'to_json', 'update_forward_refs', 'usage_bytes', 'validate', 'vector_store_id']
+2025-04-21 20:36:37,160 [INFO] httpx:1025: HTTP Request: GET https://api.openai.com/v1/files/file-QHhKGmqx43NDtRfddT1wdj "HTTP/1.1 200 OK"
+2025-04-21 20:36:37,178 [INFO] __main__:1944: Vector store file object attributes: ['__abstractmethods__', '__annotations__', '__class__', '__class_getitem__', '__class_vars__', '__copy__', '__deepcopy__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__fields__', '__fields_set__', '__format__', '__ge__', '__get_pydantic_core_schema__', '__get_pydantic_json_schema__', '__getattr__', '__getattribute__', '__getstate__', 
+'__gt__', '__hash__', '__init__', '__init_subclass__', '__iter__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__pretty__', '__private_attributes__', '__pydantic_complete__', '__pydantic_computed_fields__', '__pydantic_core_schema__', '__pydantic_custom_init__', '__pydantic_decorators__', '__pydantic_extra__', '__pydantic_fields__', '__pydantic_fields_set__', '__pydantic_generic_metadata__', '__pydantic_init_subclass__', '__pydantic_parent_namespace__', '__pydantic_post_init__', '__pydantic_private__', '__pydantic_root_model__', '__pydantic_serializer__', '__pydantic_setattr_handlers__', '__pydantic_validator__', '__reduce__', '__reduce_ex__', '__replace__', '__repr__', '__repr_args__', '__repr_name__', '__repr_recursion__', '__repr_str__', 
+'__rich_repr__', '__setattr__', '__setstate__', '__sizeof__', '__slots__', '__str__', '__subclasshook__', '__weakref__', '_abc_impl', '_calculate_keys', '_copy_and_set_values', '_get_value', '_iter', '_setattr_handler', 'attributes', 'chunking_strategy', 'construct', 'copy', 'created_at', 'dict', 'from_orm', 'id', 'json', 'last_error', 'model_computed_fields', 'model_config', 'model_construct', 'model_copy', 'model_dump', 'model_dump_json', 'model_extra', 'model_fields', 'model_fields_set', 'model_json_schema', 'model_parametrized_name', 'model_post_init', 'model_rebuild', 'model_validate', 'model_validate_json', 'model_validate_strings', 'object', 'parse_file', 'parse_obj', 'parse_raw', 'schema', 'schema_json', 'status', 'to_dict', 'to_json', 'update_forward_refs', 'usage_bytes', 'validate', 'vector_store_id']
+2025-04-21 20:36:37,567 [INFO] httpx:1025: HTTP Request: GET https://api.openai.com/v1/files/file-B2KZmiNs2RS3ktei6knMv8 "HTTP/1.1 200 OK"
+2025-04-21 20:36:37,575 [INFO] __main__:1944: Vector store file object attributes: ['__abstractmethods__', '__annotations__', '__class__', '__class_getitem__', '__class_vars__', '__copy__', '__deepcopy__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__fields__', '__fields_set__', '__format__', '__ge__', '__get_pydantic_core_schema__', '__get_pydantic_json_schema__', '__getattr__', '__getattribute__', '__getstate__', 
+'__gt__', '__hash__', '__init__', '__init_subclass__', '__iter__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__pretty__', '__private_attributes__', '__pydantic_complete__', '__pydantic_computed_fields__', '__pydantic_core_schema__', '__pydantic_custom_init__', '__pydantic_decorators__', '__pydantic_extra__', '__pydantic_fields__', '__pydantic_fields_set__', '__pydantic_generic_metadata__', '__pydantic_init_subclass__', '__pydantic_parent_namespace__', '__pydantic_post_init__', '__pydantic_private__', '__pydantic_root_model__', '__pydantic_serializer__', '__pydantic_setattr_handlers__', '__pydantic_validator__', '__reduce__', '__reduce_ex__', '__replace__', '__repr__', '__repr_args__', '__repr_name__', '__repr_recursion__', '__repr_str__', 
+'__rich_repr__', '__setattr__', '__setstate__', '__sizeof__', '__slots__', '__str__', '__subclasshook__', '__weakref__', '_abc_impl', '_calculate_keys', '_copy_and_set_values', '_get_value', '_iter', '_setattr_handler', 'attributes', 'chunking_strategy', 'construct', 'copy', 'created_at', 'dict', 'from_orm', 'id', 'json', 'last_error', 'model_computed_fields', 'model_config', 'model_construct', 'model_copy', 'model_dump', 'model_dump_json', 'model_extra', 'model_fields', 'model_fields_set', 'model_json_schema', 'model_parametrized_name', 'model_post_init', 'model_rebuild', 'model_validate', 'model_validate_json', 'model_validate_strings', 'object', 'parse_file', 'parse_obj', 'parse_raw', 'schema', 'schema_json', 'status', 'to_dict', 'to_json', 'update_forward_refs', 'usage_bytes', 'validate', 'vector_store_id']
+2025-04-21 20:36:37,825 [INFO] httpx:1025: HTTP Request: GET https://api.openai.com/v1/files/file-1TUkoJTYbUBz6RmqhY8WGD "HTTP/1.1 200 OK"
+2025-04-21 20:36:37,863 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:37] "GET /api/kb_files/vs_67fc358395d481919b4d9569eed0d2ef HTTP/1.1" 200 -
+2025-04-21 20:36:37,901 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:37] "GET /api/chat_files/278b66f8-994f-4fe2-8d9f-7eca83d28cf4 HTTP/1.1" 200 -
+2025-04-21 20:36:48,574 [INFO] chat_db:226: Updated 1 file settings for chat 278b66f8-994f-4fe2-8d9f-7eca83d28cf4
+2025-04-21 20:36:48,578 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:36:48] "POST /api/chat_files/278b66f8-994f-4fe2-8d9f-7eca83d28cf4 HTTP/1.1" 200 -
+2025-04-21 20:37:10,764 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:37:10] "POST /api/agent/process_message HTTP/1.1" 404 -
+2025-04-21 20:37:10,827 [INFO] __main__:1609: Received POST form data - template_to_populate: 'cdi_contract.pdf' (Type: <class 'str'>)
+2025-04-21 20:37:10,827 [INFO] __main__:1610: All form data keys: ['message', 'template_to_populate']
+2025-04-21 20:37:10,827 [INFO] __main__:1611: All form data values: {'message': "j'aime pour ce document generer un contrat de travail en se basant sur le template attaché + faire les corrections et adabtations necesaire avec le code de travail marocain", 'template_to_populate': 'cdi_contract.pdf'}
+2025-04-21 20:37:10,827 [INFO] __main__:1629: Saved temporary file for chat: CIN.txt
+2025-04-21 20:37:10,867 [INFO] __main__:1688: Agent Chat API Start: ChatID=278b66f8-994f-4fe2-8d9f-7eca83d28cf4, VSID=vs_67fc358395d481919b4d9569eed0d2ef, Query='j'aime pour ce document generer un contrat de trav...', 
+Files: 1
+2025-04-21 20:37:10,867 [INFO] __main__:787: Running Workflow. Query: 'j'aime pour ce document generer un contrat de trav...', TempFiles: 1, Template: cdi_contract.pdf
+2025-04-21 20:37:10,867 [INFO] __main__:794: Running QueryAnalyzerAgent to determine true intent
+2025-04-21 20:37:10,868 [INFO] __main__:803: Using model: gpt-4o-mini for query analysis
+2025-04-21 20:37:15,425 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:37:17,346 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:37:17,397 [INFO] __main__:807: QueryAnalyzerAgent raw result: {
+    "intent": "populate_template",
+    "confidence": 0.85,
+    "details": {
+        "template_name": "cdi_contract.pdf",
+        "required_fields": [
+            "nom_employe",
+            "nom_employeur",
+            "date_de_debut",
+            "salaire",
+            "poste",
+            "horaires_de_travail",
+            "durée_du_travail",
+            "clause_de_resiliation"
+        ],
+        "reasoning": "The user is explicitly asking to generate a work contract based on the attached template, indicating a need to fill in specific fields with the correct information. They also mention making necessary corrections and adaptations in line with Moroccan labor law, which suggests they expect the generated document to reflect legal compliance. The presence of an attached file, 'CIN.txt', implies that there may be information within it relevant to populating the contract, though the primary intent seems to be the generation 
+of the document itself."
+    }
+}
+2025-04-21 20:37:17,405 [INFO] __main__:840: Successfully parsed JSON: populate_template, {'template_name': 'cdi_contract.pdf', 'required_fields': ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation'], 'reasoning': "The user is explicitly asking to generate a work contract based on the attached template, indicating a need to fill in specific fields with the correct information. They also mention making necessary corrections and adaptations in line with Moroccan labor law, which suggests they expect the generated document to reflect legal compliance. The presence of an attached file, 'CIN.txt', implies that there may be information within it relevant to populating the contract, though the primary intent seems to be the generation of the document itself."}
+2025-04-21 20:37:17,405 [INFO] __main__:884: Intent determined by analyzer: populate_template
+2025-04-21 20:37:17,405 [INFO] __main__:885: Details determined by analyzer: {'template_name': 'cdi_contract.pdf', 'required_fields': ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation'], 'reasoning': "The user is explicitly asking to generate a work contract based on the attached template, indicating a need to fill in specific fields with the correct information. They also mention making necessary corrections and adaptations in line with Moroccan labor law, which suggests they expect the generated document to reflect legal compliance. The presence of an attached file, 'CIN.txt', implies that there may be information within it relevant to populating the contract, though the primary intent seems to be the generation of the document itself.", 'query': "j'aime pour ce document generer un contrat de travail en se basant sur le template attaché + faire les corrections et adabtations necesaire avec le code de travail marocain"}
+2025-04-21 20:37:17,405 [INFO] __main__:888: Using enhanced intent determination with LLM capabilities       
+2025-04-21 20:37:18,885 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:37:18,905 [INFO] __main__:388: [Tool Call] retrieve_template_content: template_name='cdi_contract.pdf'
+2025-04-21 20:37:18,905 [INFO] __main__:411: Reading template file: templates/document_templates\cdi_contract.pdf
+2025-04-21 20:37:19,025 [INFO] __main__:423: [Tool Result] Retrieved template 'cdi_contract.pdf'. Length: 5741
+2025-04-21 20:37:22,705 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:37:48,517 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:37:48,560 [INFO] __main__:902: Retrieved template content for intent analysis. Length: 5580
+2025-04-21 20:37:48,561 [INFO] intent_determination:55: Determining final intent. Initial intent: populate_template
+2025-04-21 20:37:48,564 [INFO] intent_determination:256: Final intent determination: populate_template       
+2025-04-21 20:37:48,565 [INFO] intent_determination:257: Final intent details: {'template_name': 'cdi_contract.pdf', 'required_fields': ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation'], 'reasoning': "The user is explicitly asking to generate a work contract based on the attached template, indicating a need to fill in specific fields with the correct information. They also mention making necessary corrections and adaptations in line with Moroccan labor 
+law, which suggests they expect the generated document to reflect legal compliance. The presence of an attached file, 'CIN.txt', implies that there may be information within it relevant to populating the contract, though the primary intent seems to be the generation of the document itself.", 'query': "j'aime pour ce document 
+generer un contrat de travail en se basant sur le template attaché + faire les corrections et adabtations necesaire avec le code de travail marocain", 'has_template': True, 'has_temp_files': True}
+2025-04-21 20:37:48,588 [INFO] intent_determination:279: Recording intent determination for query: 'j'aime pour ce document generer un contrat de trav...'
+2025-04-21 20:37:48,590 [INFO] intent_determination:293: Intent determination record: {"timestamp": 4776.312, "user_query": "j'aime pour ce document generer un contrat de travail en se basant sur le template attach\u00e9 + faire les corrections et adabtations necesaire avec le code de travail marocain", "analyzer_intent": "populate_template", "determined_intent": "populate_template", "intent_scores": {}, "final_workflow": null}     
+2025-04-21 20:37:48,592 [INFO] __main__:934: Final intent determination: populate_template
+2025-04-21 20:37:48,592 [INFO] __main__:935: Final intent details: {'template_name': 'cdi_contract.pdf', 'required_fields': ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation'], 'reasoning': "The user is explicitly asking to generate a work contract based on the attached template, indicating a need to fill in specific fields with the correct information. They also mention making necessary corrections and adaptations in line with Moroccan labor law, which suggests they expect the generated document to reflect legal compliance. The presence of an attached file, 'CIN.txt', implies that there may be information within it relevant to populating the contract, though the primary intent seems to be the generation of the document itself.", 'query': "j'aime pour ce document generer un contrat de travail en se basant sur le template attaché + faire les corrections et adabtations necesaire avec 
+le code de travail marocain", 'has_template': True, 'has_temp_files': True}
+2025-04-21 20:37:48,605 [INFO] __main__:939: Template population confirmed for: 'cdi_contract.pdf'
+2025-04-21 20:37:48,605 [INFO] __main__:971: Using fields for template 'cdi_contract.pdf': ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation']
+2025-04-21 20:37:48,605 [INFO] __main__:977: Executing Template Population Workflow...
+2025-04-21 20:37:48,610 [INFO] __main__:991: Gathering template: cdi_contract.pdf
+2025-04-21 20:37:49,645 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:37:49,658 [INFO] __main__:388: [Tool Call] retrieve_template_content: template_name='cdi_contract.pdf'
+2025-04-21 20:37:49,659 [INFO] __main__:411: Reading template file: templates/document_templates\cdi_contract.pdf
+2025-04-21 20:37:49,696 [INFO] __main__:423: [Tool Result] Retrieved template 'cdi_contract.pdf'. Length: 5741
+2025-04-21 20:37:53,497 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:38:26,500 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:26,605 [INFO] __main__:1010: Gathering temporary file content: CIN.txt
+2025-04-21 20:38:28,265 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:28,285 [INFO] __main__:359: [Tool Call] process_temporary_file: filename='CIN.txt'
+2025-04-21 20:38:28,285 [INFO] __main__:379: [Tool Result] Processed temporary file 'CIN.txt'. Length: 254   
+2025-04-21 20:38:29,197 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:38:32,715 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:32,715 [INFO] __main__:1020: Original content from CIN.txt: # Moroccan CIN Data (Sample) 
+
+**Numéro CNIe:** BK987654
+**Nom:** EL FASSI
+**Prénom:** Omar
+**Date de Naissance:** 22/07/1985
+**Lieu de Naissance:** Rabat
+**Adresse:** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat
+**Sexe:** M
+**Date d'Expiration:** 15/09/2032...
+2025-04-21 20:38:32,715 [INFO] __main__:1086: Enhanced content for CIN.txt: ### ORIGINAL CONTENT ###
+# Moroccan CIN Data (Sample)
+
+**Numéro CNIe:** BK987654
+**Nom:** EL FASSI
+**Prénom:** Omar
+**Date de Naissance:** 22/07/1985
+**Lieu de Naissance:** Rabat
+**Adresse:** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat
+**Sexe:** M
+**Date d'Expiration:** 15/09/2032
+### FORMATTED CONTENT ###
+# Moroccan CIN Data (Sample)
+
+KEY: numéro_cnie | VALUE: ** BK987654
+KEY: nom | VALUE: ** EL FASSI
+KEY: prénom | VALUE: ** Omar
+KEY: date_de_naissance | VALUE: ** 22/07/1985
+KEY:...
+2025-04-21 20:38:32,729 [INFO] __main__:1128: Requesting data extraction for fields: ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation']
+2025-04-21 20:38:34,879 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:38:40,885 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:40,905 [INFO] __main__:468: [Tool Call] extract_data_for_template. Required: ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation']. Sources: 5 provided.
+2025-04-21 20:38:41,024 [WARNING] app:61: FLASK_SECRET_KEY not set. Using temporary key.
+2025-04-21 20:38:41,025 [INFO] chat_db:88: Chat database schema initialized/verified.
+2025-04-21 20:38:41,025 [INFO] app:86: ChatHistoryDB initialized with chat_history.db
+2025-04-21 20:38:41,054 [INFO] document_analyzer_integration:36: [Integration] extract_data_for_template_integrated called with 8 fields
+2025-04-21 20:38:41,054 [INFO] document_analyzer_agent:507: [Agent Call] extract_data_for_template_agent_based. Required: ['nom_employe', 'nom_employeur', 'date_de_debut', 'salaire', 'poste', 'horaires_de_travail', 'durée_du_travail', 'clause_de_resiliation']. Sources: 5 provided.
+2025-04-21 20:38:43,875 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:43,887 [INFO] document_analyzer_agent:565: [Agent Result] Extracted data: {"nom_employe": "EL FASSI", "nom_employeur": "Not found", "date_de_debut": "22/07/1985", "salaire": "Not found", "poste": "Not 
+found", "horaires_de_travail": "Not found", "durée_du_travail": "Not found", "clause_de_resiliation": "Not found"}
+2025-04-21 20:38:43,887 [INFO] __main__:1135: Searching for tool output in new_items
+2025-04-21 20:38:43,897 [INFO] __main__:1151: Examining item: ToolCallItem(agent=Agent(name='DataExtractorAgent', instructions='Extract structured data from the provided context sources.\n    You will receive a JSON object with \'context_sources\' (array of text) and \'required_fields\' (array of field names).\n\n    IMPORTANT GUIDELINES FOR DATA EXTRACTION:\n    1. Carefully analyze all context sources to find the required fields\n    2. Pay special attention to any KEY: field | VALUE: value patterns in the context\n    3. Look for standard patterns like "field: value" or "field - value"\n    4. For each required field, extract the most accurate value from the context\n    5. If a field is not found in the context, return null for that field\n    6. For dates, extract them in their original format\n    7. For names, extract the full name as provided\n    8. For addresses or locations, extract the complete address\n    9. For numerical values, extract them with their units if provided\n\n    Use the extract_data_for_template tool to extract the required fields from the context sources.\n    IMPORTANT: After calling the tool, STOP IMMEDIATELY. Do not add any additional text or explanation.\n\n    EXAMPLES OF WHAT TO LOOK FOR:\n    - Direct statements: "The employee name is John Smith"\n  
+  - Form fields: "Name: John Smith"\n    - Formatted data: "KEY: employee_name | VALUE: John Smith"\n    - Contextual information: "This contract is between ABC Company and John Smith"\n\n    Be thorough and extract as much information as possible from the provided context.\n    ', handoff_description=None, handoffs=[], model='gpt-4o-mini', model_settings=ModelSettings(temperature=None, top_p=None, frequency_penalty=None, presence_penalty=None, tool_choice=None, parallel_tool_calls=None, truncation=None, max_tokens=None, reasoning=None, metadata=None, store=None, include_usage=None, extra_query=None, extra_body=None), tools=[FunctionTool(name='extract_data_for_template', description='Extracts specific data fields required for a template from provided text context sources.', params_json_schema={'properties': {'context_sources': {'items': {'type': 'string'}, 'title': 'Context Sources', 'type': 'array'}, 'required_fields': {'items': {'type': 'string'}, 'title': 'Required Fields', 'type': 'array'}}, 'required': ['context_sources', 'required_fields'], 'title': 'extract_data_for_template_args', 'type': 'object', 'additionalProperties': False}, on_invoke_tool=<function function_tool.<locals>._create_function_tool.<locals>._on_invoke_tool at 0x0000023F76ACED40>, strict_json_schema=True)], mcp_servers=[], mcp_config={}, input_guardrails=[], output_guardrails=[], output_type=None, hooks=None, tool_use_behavior='stop_on_first_tool', reset_tool_choice=True), raw_item=ResponseFunctionToolCall(arguments='{"context_sources":["User Request: j\'aime pour ce document generer un contrat de travail en se basant sur le template 
+attach\\u000e + faire les corrections et adabtations necesaire avec le code de travail marocain","Previous User Message: ","Template Being Populated: cdi_contract.pdf","Required Fields: nom_employe, nom_employeur, date_de_debut, salaire, poste, horaires_de_travail, dur\\u000e_du_travail, clause_de_resiliation","\\n\\n### Document Content from: CIN.txt\\n### ORIGINAL CONTENT ###\\n# Moroccan CIN Data (Sample) \\n\\n**Num\\u000e9ro CNIe:** BK987654  \\n**Nom:** EL FASSI  \\n**Pr\\u000e9nom:** Omar  \\n**Date de Naissance:** 22/07/1985  \\n**Lieu de Naissance:** Rabat  \\n**Adresse:** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat  \\n**Sexe:** M  \\n**Date d\'Expiration:** 15/09/2032\\n### FORMATTED CONTENT ###\\n# Moroccan CIN Data (Sample) \\n\\nKEY: num\\u000e9ro_cnie | VALUE: ** BK987654\\nKEY: nom | VALUE: ** EL FASSI\\nKEY: pr\\u000e9nom | VALUE: ** Omar\\nKEY: date_de_naissance | VALUE: ** 22/07/1985\\nKEY: lieu_de_naissance | VALUE: ** Rabat\\nKEY: adresse | VALUE: ** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat\\nKEY: sexe | VALUE: ** M\\nKEY: date_d\'expiration | VALUE: ** 15/09/2032\\nKEY: employee_name | VALUE: Avenue Mohammed\\nKEY: salari\\u000e_name | VALUE: Avenue Mohammed\\nKEY: date | VALUE: 22/07/1985\\nKEY: start_date | VALUE: 22/07/1985\\nKEY: date | VALUE: 15/09/2032\\nKEY: start_date | VALUE: 15/09/2032"],"required_fields":["nom_employe","nom_employeur","date_de_debut","salaire","poste","horaires_de_travail","durée_du_travail","clause_de_resiliation"]}', call_id='call_0yWXUP0mjvFWPkOdY7d0KRjh', name='extract_data_for_template', type='function_call', id='fc_68069eba791481919df2712232ede5de0a81f4b9da0b026c', status='completed'), type='tool_call_item')
+2025-04-21 20:38:43,925 [INFO] __main__:1153: Item attributes: {'agent': Agent(name='DataExtractorAgent', instructions='Extract structured data from the provided context sources.\n    You will receive a JSON object with \'context_sources\' (array of text) and \'required_fields\' (array of field names).\n\n    IMPORTANT GUIDELINES FOR DATA EXTRACTION:\n    1. Carefully analyze all context sources to find the required fields\n    2. Pay special attention to any KEY: field | VALUE: value patterns in the context\n    3. Look for standard patterns like "field: value" or "field - value"\n    4. For each required field, extract the most accurate value from the context\n    5. If a field is not found in the context, return null for that field\n    6. For dates, extract them in their original format\n    7. For names, extract the full name as provided\n    8. For addresses or locations, extract the complete address\n    9. For numerical values, extract them with their units if provided\n\n    Use the extract_data_for_template tool to extract the required fields from the context sources.\n    IMPORTANT: After calling the tool, STOP IMMEDIATELY. Do not add any additional text or explanation.\n\n    EXAMPLES OF WHAT TO LOOK FOR:\n    - Direct statements: "The employee name is John Smith"\n    - Form fields: "Name: John Smith"\n    - Formatted data: "KEY: employee_name | VALUE: John Smith"\n    - Contextual information: "This contract is between ABC Company and John Smith"\n\n    Be thorough and extract as much information as possible from the provided context.\n    ', handoff_description=None, handoffs=[], model='gpt-4o-mini', model_settings=ModelSettings(temperature=None, top_p=None, frequency_penalty=None, presence_penalty=None, tool_choice=None, parallel_tool_calls=None, truncation=None, max_tokens=None, reasoning=None, metadata=None, store=None, include_usage=None, extra_query=None, extra_body=None), tools=[FunctionTool(name='extract_data_for_template', description='Extracts specific data fields required for a template from provided text context sources.', params_json_schema={'properties': {'context_sources': {'items': {'type': 'string'}, 'title': 'Context Sources', 'type': 'array'}, 'required_fields': {'items': {'type': 'string'}, 'title': 'Required Fields', 'type': 'array'}}, 'required': ['context_sources', 'required_fields'], 'title': 'extract_data_for_template_args', 'type': 'object', 'additionalProperties': False}, on_invoke_tool=<function function_tool.<locals>._create_function_tool.<locals>._on_invoke_tool at 0x0000023F76ACED40>, strict_json_schema=True)], mcp_servers=[], mcp_config={}, input_guardrails=[], output_guardrails=[], output_type=None, hooks=None, tool_use_behavior='stop_on_first_tool', reset_tool_choice=True), 'raw_item': ResponseFunctionToolCall(arguments='{"context_sources":["User Request: j\'aime pour ce document generer un contrat de travail en se basant sur le template attach\\u000e + faire les corrections et adabtations necesaire avec le code de travail marocain","Previous User Message: ","Template Being Populated: cdi_contract.pdf","Required Fields: nom_employe, nom_employeur, date_de_debut, salaire, poste, horaires_de_travail, dur\\u000e_du_travail, clause_de_resiliation","\\n\\n### Document 
+Content from: CIN.txt\\n### ORIGINAL CONTENT ###\\n# Moroccan CIN Data (Sample) \\n\\n**Num\\u000e9ro CNIe:** BK987654  \\n**Nom:** EL FASSI  \\n**Pr\\u000e9nom:** Omar  \\n**Date de Naissance:** 22/07/1985  \\n**Lieu 
+de Naissance:** Rabat  \\n**Adresse:** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat  \\n**Sexe:** M  \\n**Date 
+d\'Expiration:** 15/09/2032\\n### FORMATTED CONTENT ###\\n# Moroccan CIN Data (Sample) \\n\\nKEY: num\\u000e9ro_cnie | VALUE: ** BK987654\\nKEY: nom | VALUE: ** EL FASSI\\nKEY: pr\\u000e9nom | VALUE: ** Omar\\nKEY: date_de_naissance | VALUE: ** 22/07/1985\\nKEY: lieu_de_naissance | VALUE: ** Rabat\\nKEY: adresse | VALUE: ** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat\\nKEY: sexe | VALUE: ** M\\nKEY: date_d\'expiration | VALUE: ** 15/09/2032\\nKEY: employee_name | VALUE: Avenue Mohammed\\nKEY: salari\\u000e_name | VALUE: Avenue Mohammed\\nKEY: date | VALUE: 22/07/1985\\nKEY: start_date | VALUE: 22/07/1985\\nKEY: date | VALUE: 15/09/2032\\nKEY: start_date | VALUE: 15/09/2032"],"required_fields":["nom_employe","nom_employeur","date_de_debut","salaire","poste","horaires_de_travail","durée_du_travail","clause_de_resiliation"]}', call_id='call_0yWXUP0mjvFWPkOdY7d0KRjh', name='extract_data_for_template', type='function_call', id='fc_68069eba791481919df2712232ede5de0a81f4b9da0b026c', status='completed'), 'type': 'tool_call_item'}
+2025-04-21 20:38:43,935 [INFO] __main__:1151: Examining item: ToolCallOutputItem(agent=Agent(name='DataExtractorAgent', instructions='Extract structured data from the provided context sources.\n    You will receive a JSON object with \'context_sources\' (array of text) and \'required_fields\' (array of field names).\n\n    IMPORTANT GUIDELINES FOR DATA EXTRACTION:\n    1. Carefully analyze all context sources to find the required fields\n    2. Pay special attention to any KEY: field | VALUE: value patterns in the context\n    3. Look for 
+standard patterns like "field: value" or "field - value"\n    4. For each required field, extract the most accurate value from the context\n    5. If a field is not found in the context, return null for that field\n   
+ 6. For dates, extract them in their original format\n    7. For names, extract the full name as provided\n  
+  8. For addresses or locations, extract the complete address\n    9. For numerical values, extract them with their units if provided\n\n    Use the extract_data_for_template tool to extract the required fields from the context sources.\n    IMPORTANT: After calling the tool, STOP IMMEDIATELY. Do not add any additional text or explanation.\n\n    EXAMPLES OF WHAT TO LOOK FOR:\n    - Direct statements: "The employee name is John Smith"\n    - Form fields: "Name: John Smith"\n    - Formatted data: "KEY: employee_name | VALUE: John Smith"\n  
+  - Contextual information: "This contract is between ABC Company and John Smith"\n\n    Be thorough and extract as much information as possible from the provided context.\n    ', handoff_description=None, handoffs=[], model='gpt-4o-mini', model_settings=ModelSettings(temperature=None, top_p=None, frequency_penalty=None, presence_penalty=None, tool_choice=None, parallel_tool_calls=None, truncation=None, max_tokens=None, reasoning=None, metadata=None, store=None, include_usage=None, extra_query=None, extra_body=None), tools=[FunctionTool(name='extract_data_for_template', description='Extracts specific data fields required for a template from provided text context sources.', params_json_schema={'properties': {'context_sources': {'items': {'type': 'string'}, 'title': 'Context Sources', 'type': 'array'}, 'required_fields': {'items': {'type': 'string'}, 'title': 'Required Fields', 'type': 'array'}}, 'required': ['context_sources', 'required_fields'], 'title': 'extract_data_for_template_args', 'type': 'object', 'additionalProperties': False}, on_invoke_tool=<function function_tool.<locals>._create_function_tool.<locals>._on_invoke_tool at 0x0000023F76ACED40>, strict_json_schema=True)], 
+mcp_servers=[], mcp_config={}, input_guardrails=[], output_guardrails=[], output_type=None, hooks=None, tool_use_behavior='stop_on_first_tool', reset_tool_choice=True), raw_item={'call_id': 'call_0yWXUP0mjvFWPkOdY7d0KRjh', 'output': "data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'} status='success' error_message=None", 'type': 'function_call_output'}, output=ExtractedData(data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'}, status='success', error_message=None), type='tool_call_output_item')
+2025-04-21 20:38:43,946 [INFO] __main__:1153: Item attributes: {'agent': Agent(name='DataExtractorAgent', instructions='Extract structured data from the provided context sources.\n    You will receive a JSON object with \'context_sources\' (array of text) and \'required_fields\' (array of field names).\n\n    IMPORTANT GUIDELINES FOR DATA EXTRACTION:\n    1. Carefully analyze all context sources to find the required fields\n    2. Pay special attention to any KEY: field | VALUE: value patterns in the context\n    3. Look for standard patterns like "field: value" or "field - value"\n    4. For each required field, extract the most accurate value from the context\n    5. If a field is not found in the context, return null for that field\n    6. For dates, extract them in their original format\n    7. For names, extract the full name as provided\n    8. For addresses or locations, extract the complete address\n    9. For numerical values, extract them with their units if provided\n\n    Use the extract_data_for_template tool to extract the required fields from the context sources.\n    IMPORTANT: After calling the tool, STOP IMMEDIATELY. Do not add any additional text or explanation.\n\n    EXAMPLES OF WHAT TO LOOK FOR:\n    - Direct statements: "The employee name is John Smith"\n    - Form fields: "Name: John Smith"\n    - Formatted data: "KEY: employee_name | VALUE: John Smith"\n    - Contextual information: "This contract is between ABC Company and John Smith"\n\n    Be thorough and extract as much information as possible from the provided context.\n    ', handoff_description=None, handoffs=[], model='gpt-4o-mini', model_settings=ModelSettings(temperature=None, top_p=None, frequency_penalty=None, presence_penalty=None, tool_choice=None, parallel_tool_calls=None, truncation=None, max_tokens=None, reasoning=None, metadata=None, store=None, include_usage=None, extra_query=None, extra_body=None), tools=[FunctionTool(name='extract_data_for_template', description='Extracts specific data fields required for a template from provided text context sources.', params_json_schema={'properties': {'context_sources': {'items': {'type': 'string'}, 'title': 'Context Sources', 'type': 'array'}, 'required_fields': {'items': {'type': 'string'}, 'title': 'Required Fields', 'type': 'array'}}, 'required': ['context_sources', 'required_fields'], 'title': 'extract_data_for_template_args', 'type': 'object', 'additionalProperties': False}, on_invoke_tool=<function function_tool.<locals>._create_function_tool.<locals>._on_invoke_tool at 0x0000023F76ACED40>, strict_json_schema=True)], mcp_servers=[], mcp_config={}, input_guardrails=[], output_guardrails=[], output_type=None, hooks=None, tool_use_behavior='stop_on_first_tool', reset_tool_choice=True), 'raw_item': {'call_id': 'call_0yWXUP0mjvFWPkOdY7d0KRjh', 'output': "data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'} status='success' error_message=None", 'type': 'function_call_output'}, 'output': ExtractedData(data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'}, status='success', error_message=None), 'type': 'tool_call_output_item'}
+2025-04-21 20:38:43,960 [INFO] __main__:1171: Found tool output item with output that looks like ExtractedData
+2025-04-21 20:38:43,960 [INFO] __main__:1176: Using tool output: data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'} status='success' error_message=None
+2025-04-21 20:38:43,964 [WARNING] __main__:1180: Tool output is not ExtractedData: <class 'app.ExtractedData'>
+2025-04-21 20:38:43,966 [WARNING] __main__:1186: Cannot convert tool output to ExtractedData: data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'} status='success' error_message=None
+2025-04-21 20:38:43,966 [WARNING] __main__:1192: Could not find or use tool output in new_items, trying final_output
+2025-04-21 20:38:43,966 [INFO] __main__:1196: Final output type: <class 'str'>, value: data={'nom_employe': 'EL FASSI', 'nom_employeur': 'Not found', 'date_de_debut': '22/07/1985', 'salaire': 'Not found', 'poste': 'Not found', 'horaires_de_travail': 'Not found', 'durée_du_travail': 'Not found', 'clause_de_resiliation': 'Not found'} status='success' error_message=None
+2025-04-21 20:38:43,975 [WARNING] __main__:1223: Failed to parse JSON from final_output: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+2025-04-21 20:38:43,975 [WARNING] __main__:1231: Attempting direct extraction from temporary files
+2025-04-21 20:38:43,975 [INFO] __main__:1248: Found 1 temporary files for direct extraction
+2025-04-21 20:38:45,463 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:45,490 [INFO] __main__:359: [Tool Call] process_temporary_file: filename='CIN.txt'
+2025-04-21 20:38:45,492 [INFO] __main__:379: [Tool Result] Processed temporary file 'CIN.txt'. Length: 254
+2025-04-21 20:38:45,680 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:38:45,996 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:38:48,940 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:48,957 [INFO] __main__:1257: Direct extraction from CIN.txt: # Moroccan CIN Data (Sample) 
+
+**Numéro CNIe:** BK987654
+**Nom:** EL FASSI
+**Prénom:** Omar
+**Date de Naissance:** 22/07/1985
+**Lieu de Naissance:** Rabat
+**Adresse:** 45 Avenue Mohammed V, Apt 10, Agdal, Rabat
+**Sexe:** M
+**Date d'Expiration:** 15/09/2032...
+2025-04-21 20:38:48,957 [INFO] __main__:1275: Directly extracted nom_employe: ** EL FASSI from CIN.txt       
+2025-04-21 20:38:48,969 [INFO] __main__:1299: Successfully extracted data directly from temporary files: {'nom_employe': '** EL FASSI', 'nom_employeur': None, 'date_de_debut': None, 'salaire': None, 'poste': None, 'horaires_de_travail': None, 'durée_du_travail': None, 'clause_de_resiliation': None}
+2025-04-21 20:38:48,971 [INFO] __main__:1313: Using extracted data: data={'nom_employe': '** EL FASSI', 'nom_employeur': None, 'date_de_debut': None, 'salaire': None, 'poste': None, 'horaires_de_travail': None, 'durée_du_travail': None, 'clause_de_resiliation': None} status='success' error_message=None
+2025-04-21 20:38:48,973 [INFO] __main__:1319: Data extraction successful: {'nom_employe': '** EL FASSI', 'nom_employeur': None, 'date_de_debut': None, 'salaire': None, 'poste': None, 'horaires_de_travail': None, 'durée_du_travail': None, 'clause_de_resiliation': None}
+2025-04-21 20:38:48,977 [INFO] __main__:1335: Fetching relevant KB content for template population based on user query
+2025-04-21 20:38:50,527 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:38:50,553 [INFO] __main__:243: [Tool Call] get_kb_document_content: type='Labor Code', query='nom_employe nom_employeur date_de_debut salaire po...'
+2025-04-21 20:38:50,568 [INFO] __main__:258: Using 1 included files for chat 278b66f8-994f-4fe2-8d9f-7eca83d28cf4
+2025-04-21 20:38:50,572 [INFO] __main__:306: Searching vector store vs_67fc358395d481919b4d9569eed0d2ef with 
+filters: {
+  "type": "and",
+  "filters": [
+    {
+      "type": "eq",
+      "key": "document_type",
+      "value": "Labor Code"
+    },
+    {
+      "type": "eq",
+      "key": "id",
+      "value": "file-1TUkoJTYbUBz6RmqhY8WGD"
+    }
+  ]
+}
+2025-04-21 20:38:51,431 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:38:52,197 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/vector_stores/vs_67fc358395d481919b4d9569eed0d2ef/search "HTTP/1.1 200 OK"
+2025-04-21 20:38:52,223 [INFO] __main__:311: No results with all filters. Trying with just file filters for query: 'nom_employe nom_employeur date_de_debut salaire po...'
+2025-04-21 20:38:52,232 [INFO] __main__:329: Trying with file-only filter: {
+  "type": "eq",
+  "key": "id",
+  "value": "file-1TUkoJTYbUBz6RmqhY8WGD"
+}
+2025-04-21 20:38:53,014 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/vector_stores/vs_67fc358395d481919b4d9569eed0d2ef/search "HTTP/1.1 200 OK"
+2025-04-21 20:38:53,031 [INFO] __main__:334: No results with filters. Trying without filters for query: 'nom_employe nom_employeur date_de_debut salaire po...'
+2025-04-21 20:38:53,031 [INFO] __main__:341: Trying without any filters as last resort
+2025-04-21 20:38:54,081 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/vector_stores/vs_67fc358395d481919b4d9569eed0d2ef/search "HTTP/1.1 200 OK"
+2025-04-21 20:38:54,213 [INFO] __main__:347: [Tool Result] KB Content Found for query 'nom_employe nom_employeur date...'. Len: 12380
+2025-04-21 20:38:57,108 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 No Content"
+2025-04-21 20:39:07,743 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK"
+2025-04-21 20:39:07,774 [INFO] __main__:1348: Retrieved KB content for template population. Length: 3567
+2025-04-21 20:39:07,779 [INFO] __main__:1365: Populating template 'cdi_contract.pdf' with extracted data: {  
+  "nom_employe": "** EL FASSI",
+  "nom_employeur": null,
+  "date_de_debut": null,
+  "salaire": null,
+  "poste": null,
+  "horaires_de_travail": null,
+  "dur\u00e9e_du_travail": null,
+  "clause_de_resiliation": null
+}
+2025-04-21 20:39:12,848 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 
+No Content"
+2025-04-21 20:39:32,602 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK" 
+2025-04-21 20:39:32,602 [INFO] __main__:1378: Generating DOCX file for template 'cdi_contract.pdf'
+2025-04-21 20:39:33,862 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 
+No Content"
+2025-04-21 20:40:03,514 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK" 
+2025-04-21 20:40:03,765 [INFO] docx_generator:269: Detected document type: contract for template: cdi_contract.pdf  
+2025-04-21 20:40:03,864 [INFO] docx_generator:491: Generated DOCX file: docx_output\cdi_contract_pdf_52feb3a0.docx  
+2025-04-21 20:40:05,396 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 
+No Content"
+2025-04-21 20:40:05,437 [INFO] httpx:1740: HTTP Request: POST https://api.openai.com/v1/responses "HTTP/1.1 200 OK" 
+2025-04-21 20:40:05,451 [INFO] __main__:1392: DOCX generation successful. Download link: /download_docx/cdi_contract_pdf_52feb3a0.docx
+2025-04-21 20:40:05,525 [INFO] __main__:1722: Agent Chat API End: ChatID=278b66f8-994f-4fe2-8d9f-7eca83d28cf4. Total time: 174.70s
+2025-04-21 20:40:05,525 [INFO] werkzeug:97: 192.168.100.215 - - [21/Apr/2025 20:40:05] "POST /chat/278b66f8-994f-4fe2-8d9f-7eca83d28cf4 HTTP/1.1" 200 -
+2025-04-21 20:40:11,134 [INFO] httpx:1025: HTTP Request: POST https://api.openai.com/v1/traces/ingest "HTTP/1.1 204 
+No Content"
+
+
+
+
+
