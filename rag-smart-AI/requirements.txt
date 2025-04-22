@@ -1,0 +1,10 @@
+PyMuPDF (for PDF handling)
+python-dotenv
+Flask
+Werkzeug
+openai
+markdown
+pydantic
+agents-sdk (OpenAI Agents SDK)
+python-docx
+beautifulsoup4
