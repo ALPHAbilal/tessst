@@ -22,6 +22,9 @@ from openai import (
 )
 from typing import Optional, List, Dict, Any, Union
 
+# Import semantic cache for agent-driven query caching
+from semantic_cache import semantic_search_cache
+
 # --- Agent SDK Imports ---
 from agents import Agent, Runner, Handoff, RunContextWrapper, function_tool
 from agents.result import RunResult  # Import for extract_final_answer function
@@ -36,10 +39,11 @@ from agents.tracing import add_trace_processor # Correct registration function p
 from intent_determination import determine_final_intent, record_intent_determination
 
 # --- DocumentAnalyzerAgent Integration ---
-from document_analyzer_integration import (
-    extract_data_for_template_integrated,
-    detect_required_fields_from_template_integrated
-)
+# Import the integration module (functions will be imported later)
+import document_analyzer_integration
+
+# Import tools from document_analyzer_agent
+from document_analyzer_agent import detect_fields_from_template
 
 # --- Pydantic Models ---
 from pydantic import BaseModel, Field, ConfigDict
@@ -75,9 +79,11 @@ SEARCH_RANKER = os.getenv('SEARCH_RANKER', 'auto')
 DEFAULT_VS_CACHE_DURATION = int(os.getenv('DEFAULT_VS_CACHE_DURATION', 300))
 
 # --- Constants & Configurable Values ---
+DOCX_OUTPUT_DIR = os.getenv('DOCX_OUTPUT_DIR', 'docx_output')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(TEMPLATE_DIR, exist_ok=True)
+os.makedirs(DOCX_OUTPUT_DIR, exist_ok=True)
 
 # --- Database Setup ---
 try:
@@ -117,6 +123,27 @@ def get_model_with_fallback(preferred_model=COMPLETION_MODEL):
 
 # --- Helper Functions ---
 def allowed_file(filename): return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# --- Cache Management Functions ---
+async def clear_semantic_cache():
+    """Clear the semantic search cache"""
+    semantic_search_cache.cache.clear()
+    semantic_search_cache.timestamps.clear()
+    logger.info("Semantic search cache cleared")
+
+async def get_cache_stats():
+    """Get statistics about the semantic cache"""
+    total_entries = len(semantic_search_cache.cache)
+    expired_entries = sum(1 for key, timestamp in semantic_search_cache.timestamps.items()
+                         if time.time() - timestamp > semantic_search_cache.ttl)
+    return {
+        "total_entries": total_entries,
+        "active_entries": total_entries - expired_entries,
+        "expired_entries": expired_entries,
+        "cache_size_limit": semantic_search_cache.max_size,
+        "ttl_seconds": semantic_search_cache.ttl,
+        "confidence_threshold": semantic_search_cache.confidence_threshold
+    }
 
 # --- Vector Store Functions ---
 vector_store_cache = {"list": [], "last_updated": 0}
@@ -214,10 +241,8 @@ class RetrievalError(BaseModel):
     error_message: str
     details: Optional[str] = None
 
-class ExtractedData(BaseModel):
-    data: Dict[str, Optional[str]]  # Dictionary with string keys and optional string values
-    status: str = "success"
-    error_message: Optional[str] = None
+# Import the shared data model
+from data_models import ExtractedData
 
 class FinalAnswer(BaseModel):
     markdown_response: str
@@ -247,6 +272,27 @@ async def get_kb_document_content(ctx: RunContextWrapper, document_type: str, qu
     chat_id = tool_context.get("chat_id")
     if not tool_client or not vs_id:
         return RetrievalError(error_message="Tool config error.")
+
+    # Prepare filter information for cache lookup
+    filter_info = {'document_type': document_type}
+
+    # Check semantic cache first
+    try:
+        cached_result = await semantic_search_cache.find_semantic_match(
+            new_query=query_or_identifier,
+            vector_store_id=vs_id,
+            filters=filter_info,
+            chat_id=chat_id or "default"
+        )
+
+        if cached_result:
+            logger.info(f"[SEMANTIC CACHE HIT] Retrieved semantically equivalent result for query: '{query_or_identifier[:30]}...'")
+            # Ensure the cached result is the correct type
+            if isinstance(cached_result, dict) and 'content' in cached_result and 'source_filename' in cached_result:
+                return RetrievalSuccess(**cached_result)
+            return cached_result
+    except Exception as cache_err:
+        logger.warning(f"Semantic cache lookup failed: {cache_err}. Falling back to direct search.")
 
     # Get file inclusion settings if chat_id is provided
     included_file_ids = []
@@ -303,7 +349,7 @@ async def get_kb_document_content(ctx: RunContextWrapper, document_type: str, qu
         }
 
         # Log the search parameters for debugging
-        logger.info(f"Searching vector store {vs_id} with filters: {json.dumps(filter_obj, indent=2) if filter_obj else 'None'}")
+        logger.info(f"[CACHE MISS] Searching vector store {vs_id} with filters: {json.dumps(filter_obj, indent=2) if filter_obj else 'None'}")
         search_results = await asyncio.to_thread(tool_client.vector_stores.search, **search_params)
 
         # If no results with all filters, try with just file filters if we have them
@@ -345,10 +391,44 @@ async def get_kb_document_content(ctx: RunContextWrapper, document_type: str, qu
             content = "\n\n".join(re.sub(r'\s+', ' ', part.text).strip() for res in search_results.data for part in res.content if part.type == 'text')
             source_filename = search_results.data[0].filename or f"FileID:{search_results.data[0].file_id[-6:]}"
             logger.info(f"[Tool Result] KB Content Found for query '{query_or_identifier[:30]}...'. Len: {len(content)}")
-            return RetrievalSuccess(content=content, source_filename=source_filename)
+
+            # Create result object
+            result = RetrievalSuccess(content=content, source_filename=source_filename)
+
+            # Store in semantic cache
+            try:
+                await semantic_search_cache.set(
+                    vector_store_id=vs_id,
+                    query=query_or_identifier,
+                    filters=filter_info,
+                    chat_id=chat_id or "default",
+                    document_type=document_type,
+                    result=result
+                )
+                logger.info(f"[CACHE SET] Stored new result in semantic cache")
+            except Exception as cache_err:
+                logger.warning(f"Failed to store result in semantic cache: {cache_err}")
+
+            return result
         else:
             logger.warning(f"[Tool Result] No KB content found for query: '{query_or_identifier[:50]}...'")
-            return RetrievalError(error_message=f"No KB content found for query related to '{document_type}'.")
+            error_result = RetrievalError(error_message=f"No KB content found for query related to '{document_type}'.")
+
+            # Also cache negative results to avoid repeated failed searches
+            try:
+                await semantic_search_cache.set(
+                    vector_store_id=vs_id,
+                    query=query_or_identifier,
+                    filters=filter_info,
+                    chat_id=chat_id or "default",
+                    document_type=document_type,
+                    result=error_result
+                )
+                logger.info(f"[CACHE SET] Stored negative result in semantic cache")
+            except Exception as cache_err:
+                logger.warning(f"Failed to store negative result in semantic cache: {cache_err}")
+
+            return error_result
     except Exception as e:
         logger.error(f"[Tool Error] KB Search failed for query '{query_or_identifier[:30]}...': {e}", exc_info=True)
         return RetrievalError(error_message=f"KB Search error: {str(e)}")
@@ -383,53 +463,58 @@ async def process_temporary_file(ctx: RunContextWrapper, filename: str) -> Union
         return RetrievalError(error_message=f"Error processing temp file: {str(e)}")
 
 @function_tool
-def retrieve_template_content(template_name: str) -> Union[RetrievalSuccess, RetrievalError]:
+async def retrieve_template_content(ctx: RunContextWrapper, template_name: str) -> Union[RetrievalSuccess, RetrievalError]:
     """Retrieves the text content of a specified document template (txt, md, pdf)."""
     logger.info(f"[Tool Call] retrieve_template_content: template_name='{template_name}'")
     try:
-        # Sanitize template_name but preserve extension
-        original_filename = secure_filename(template_name)
-        base_name, ext = os.path.splitext(original_filename)
-        if not ext: ext = ".md" # Default to markdown if no extension provided
+        # Use asyncio.to_thread to run the file operations asynchronously
+        async def process_template():
+            # Sanitize template_name but preserve extension
+            original_filename = secure_filename(template_name)
+            base_name, ext = os.path.splitext(original_filename)
+            if not ext: ext = ".md" # Default to markdown if no extension provided
 
-        # Check if extension is allowed for templates
-        allowed_template_exts = {'.txt', '.md', '.pdf'}
-        if ext.lower() not in allowed_template_exts:
-             logger.error(f"Attempted to retrieve template with unsupported extension: {original_filename}")
-             return RetrievalError(error_message=f"Unsupported template file type '{ext}'. Allowed: {', '.join(allowed_template_exts)}")
+            # Check if extension is allowed for templates
+            allowed_template_exts = {'.txt', '.md', '.pdf'}
+            if ext.lower() not in allowed_template_exts:
+                logger.error(f"Attempted to retrieve template with unsupported extension: {original_filename}")
+                return RetrievalError(error_message=f"Unsupported template file type '{ext}'. Allowed: {', '.join(allowed_template_exts)}")
 
-        final_filename = f"{base_name}{ext}" # Reconstruct potentially sanitized name
-        template_path = os.path.join(TEMPLATE_DIR, final_filename)
+            final_filename = f"{base_name}{ext}" # Reconstruct potentially sanitized name
+            template_path = os.path.join(TEMPLATE_DIR, final_filename)
 
-        # Security check: Ensure path is still within TEMPLATE_DIR
-        if not os.path.exists(template_path) or os.path.commonpath([TEMPLATE_DIR]) != os.path.commonpath([TEMPLATE_DIR, template_path]):
-            logger.error(f"[Tool Error] Template file not found or invalid path: {template_path}")
-            return RetrievalError(error_message=f"Template '{template_name}' not found.")
+            # Security check: Ensure path is still within TEMPLATE_DIR
+            if not os.path.exists(template_path) or os.path.commonpath([TEMPLATE_DIR]) != os.path.commonpath([TEMPLATE_DIR, template_path]):
+                logger.error(f"[Tool Error] Template file not found or invalid path: {template_path}")
+                return RetrievalError(error_message=f"Template '{template_name}' not found.")
 
-        # --- Extract content based on type ---
-        content = ""
-        logger.info(f"Reading template file: {template_path}")
-        if ext.lower() == ".pdf":
-            # Use our robust PDF text extraction function
-            content = extract_text_from_pdf(template_path)
-        elif ext.lower() in [".txt", ".md"]:
-            with open(template_path, 'r', encoding='utf-8') as f:
-                 content = f.read()
+            # --- Extract content based on type ---
+            content = ""
+            logger.info(f"Reading template file: {template_path}")
+            if ext.lower() == ".pdf":
+                # Use our robust PDF text extraction function
+                content = extract_text_from_pdf(template_path)
+            elif ext.lower() in [".txt", ".md"]:
+                with open(template_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
 
-        if not content:
-            logger.warning(f"Extracted empty content from template: {final_filename}")
-            return RetrievalError(error_message=f"Could not extract content from template '{final_filename}'.")
+            if not content:
+                logger.warning(f"Extracted empty content from template: {final_filename}")
+                return RetrievalError(error_message=f"Could not extract content from template '{final_filename}'.")
 
-        logger.info(f"[Tool Result] Retrieved template '{final_filename}'. Length: {len(content)}")
-        cleaned_content = re.sub(r'\s+', ' ', content).strip()
-        return RetrievalSuccess(content=cleaned_content, source_filename=f"Template: {original_filename}")
+            logger.info(f"[Tool Result] Retrieved template '{final_filename}'. Length: {len(content)}")
+            cleaned_content = re.sub(r'\s+', ' ', content).strip()
+            return RetrievalSuccess(content=cleaned_content, source_filename=f"Template: {original_filename}")
+
+        # Run the template processing function asynchronously
+        return await process_template()
 
     except Exception as e:
          logger.error(f"[Tool Error] Error retrieving template '{template_name}': {e}", exc_info=True)
          return RetrievalError(error_message=f"Error retrieving template: {str(e)}")
 
 @function_tool
-def generate_docx_from_markdown(ctx: RunContextWrapper, markdown_content: str, template_name: str) -> DOCXGenerationResult:
+async def generate_docx_from_markdown(ctx: RunContextWrapper, markdown_content: str, template_name: str) -> DOCXGenerationResult:
     """Converts markdown content into a professionally formatted DOCX file.
 
     Args:
@@ -443,8 +528,8 @@ def generate_docx_from_markdown(ctx: RunContextWrapper, markdown_content: str, t
         # Import the docx_generator module
         import docx_generator
 
-        # Generate the DOCX file
-        file_path, file_name = docx_generator.markdown_to_docx(markdown_content, template_name)
+        # Generate the DOCX file asynchronously
+        file_path, file_name = await asyncio.to_thread(docx_generator.markdown_to_docx, markdown_content, template_name)
 
         # Return success result
         return DOCXGenerationResult(
@@ -468,15 +553,18 @@ async def extract_data_for_template(ctx: RunContextWrapper, context_sources: Lis
     logger.info(f"[Tool Call] extract_data_for_template. Required: {required_fields}. Sources: {len(context_sources)} provided.")
 
     # Call the integrated DocumentAnalyzerAgent implementation
-    return await extract_data_for_template_integrated(ctx, context_sources, required_fields)
+    return await document_analyzer_integration.extract_data_for_template_integrated(ctx, context_sources, required_fields)
 
 # --- Helper Functions for Workflow ---
 async def detect_required_fields_from_template(template_content: str, template_name: str) -> List[str]:
     """Dynamically detect required fields from a template based on content analysis."""
     logger.info(f"Attempting to detect required fields from template: {template_name}")
 
-    # Call the integrated DocumentAnalyzerAgent implementation
-    return await detect_required_fields_from_template_integrated(template_content, template_name)
+    # Create a context wrapper with the OpenAI client
+    ctx = RunContextWrapper({"client": get_openai_client()})
+
+    # Call the detect_fields_from_template tool directly using on_invoke_tool
+    return await detect_fields_from_template.on_invoke_tool(ctx, template_content, template_name)
 
 def extract_final_answer(run_result: RunResult) -> str:
     """Extracts markdown response from FinalAnswer Pydantic model in RunResult,
@@ -531,19 +619,24 @@ async def run_standard_agent_rag(user_query: str, history: List[Dict[str, str]],
                 kb_query = f"Moroccan Labor Code information related to: {user_query}"
                 document_type = "code de travail"  # More specific document type
 
-            # Try to get content from the knowledge base
-            kb_res_raw = await Runner.run(data_gatherer_agent,
-                                        input=f"Get KB content about {document_type} related to: {kb_query}",
-                                        context=kb_context)
-            kb_data = kb_res_raw.final_output
+            # Get KB content using the minimal data gathering agent
+            kb_data_raw = await Runner.run(
+                data_gathering_agent_minimal,
+                input=f"Get KB content about '{document_type}' related to: {kb_query}",
+                context=kb_context
+            )
+            kb_data = kb_data_raw.final_output
 
             # If first attempt fails, try a more general search
             if isinstance(kb_data, RetrievalError):
                 logger.info(f"First KB retrieval attempt failed. Trying more general search.")
-                kb_res_raw = await Runner.run(data_gatherer_agent,
-                                            input=f"Get KB content for: {kb_query}",
-                                            context=kb_context)
-                kb_data = kb_res_raw.final_output
+                # Get KB content using the minimal data gathering agent with a more general document type
+                kb_data_raw = await Runner.run(
+                    data_gathering_agent_minimal,
+                    input=f"Get KB content about 'general' related to: {kb_query}",
+                    context=kb_context
+                )
+                kb_data = kb_data_raw.final_output
 
             if isinstance(kb_data, RetrievalSuccess):
                 kb_content = kb_data.content
@@ -590,20 +683,16 @@ async def run_standard_agent_rag(user_query: str, history: List[Dict[str, str]],
         return f"Sorry, an error occurred during processing: {html.escape(str(e))}"
 
 # --- Agent Definitions ---
-docx_generator_agent = Agent(
-    name="DOCXGeneratorAgent",
-    instructions="""You are a specialized agent that converts markdown document content into
-professionally formatted DOCX files. You will analyze the document content,
-determine appropriate styling and formatting based on document type, and
-generate a well-structured DOCX document that follows business standards.
-
-You will receive markdown content and a template name, and you should use the
-generate_docx_from_markdown tool to convert it to a DOCX file.
-
-Return the result from the tool directly.""",
-    tools=[generate_docx_from_markdown],
+# Define the minimal Data Gathering Agent
+data_gathering_agent_minimal = Agent(
+    name="DataGatheringAgentMinimal",
+    instructions="""Use the provided tools to gather specific data or document content.
+    Call the *single* most appropriate tool based on the request.
+    Once the tool call is complete, stop and provide the tool's output.""",
+    tools=[retrieve_template_content, process_temporary_file, get_kb_document_content],
     model=COMPLETION_MODEL,
-    output_type=DOCXGenerationResult
+    tool_use_behavior="stop_on_first_tool",
+    output_type=Union[RetrievalSuccess, RetrievalError]
 )
 
 query_analyzer_agent = Agent(
@@ -664,21 +753,15 @@ query_analyzer_agent = Agent(
     model=COMPLETION_MODEL
     # No output_type to avoid schema validation issues
 )
-data_gatherer_agent = Agent(
-    name="DataGathererAgent",
-    instructions="""You gather specific information using tools based on instructions. Call the appropriate tool (`get_kb_document_content`, `process_temporary_file`, `retrieve_template_content`) to fulfill the request. Your final output should be the direct result object returned by the tool you called.
-
-    IMPORTANT RULES:
-    1. If the tool returns an error or no results, DO NOT fabricate information
-    2. If multiple search attempts fail, accept that the information may not be available
-    3. Do not try to be helpful by making up information - accuracy is more important than helpfulness
-    4. Only return information that is explicitly retrieved by the tools
-    5. If a search fails, you can try different search terms, but limit to 3-5 attempts maximum
-    """,
-    tools=[get_kb_document_content, process_temporary_file, retrieve_template_content],
+# Define the minimal DOCX Generation Agent
+docx_generation_agent_minimal = Agent(
+    name="DOCXGenerationAgentMinimal",
+    instructions="""Use the generate_docx_from_markdown tool to convert the provided markdown content into a DOCX file.
+    Once the tool call is complete, stop and provide the tool's output.""",
+    tools=[generate_docx_from_markdown],
     model=COMPLETION_MODEL,
-    # Specify the output type to match the tool's return types
-    output_type=Union[RetrievalSuccess, RetrievalError]
+    tool_use_behavior="stop_on_first_tool",
+    output_type=DOCXGenerationResult
 )
 data_extractor_agent = Agent(
     name="DataExtractorAgent",
@@ -891,10 +974,12 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
         template_content = None
         if template_to_populate and template_to_populate.strip():
             try:
-                # Get the template content for analysis
-                template_res_raw = await Runner.run(data_gatherer_agent,
-                                                 input=f"Retrieve template content named '{template_to_populate}'.",
-                                                 context=workflow_context)
+                # Get the template content using the minimal data gathering agent
+                template_res_raw = await Runner.run(
+                    data_gathering_agent_minimal,
+                    input=f"Retrieve template content named '{template_to_populate}'.",
+                    context=workflow_context
+                )
                 template_data = template_res_raw.final_output
 
                 if isinstance(template_data, RetrievalSuccess):
@@ -939,7 +1024,12 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             logger.info(f"Template population confirmed for: '{template_to_populate}'")
             # Get the template content if we haven't already
             if not template_content:
-                template_res_raw = await Runner.run(data_gatherer_agent, input=f"Retrieve template content named '{template_to_populate}'.", context=workflow_context)
+                # Get the template content using the minimal data gathering agent
+                template_res_raw = await Runner.run(
+                    data_gathering_agent_minimal,
+                    input=f"Retrieve template content named '{template_to_populate}'.",
+                    context=workflow_context
+                )
                 template_data = template_res_raw.final_output
 
                 if not isinstance(template_data, RetrievalSuccess):
@@ -955,6 +1045,7 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             # If no required fields were provided, detect them from the template
             if not required_fields:
                 logger.info(f"No required fields provided, detecting from template: {template_name}")
+                # Call detect_required_fields_from_template helper function
                 required_fields = await detect_required_fields_from_template(template_content, template_name)
 
             # Normalize field names (convert to lowercase and replace spaces with underscores)
@@ -987,9 +1078,14 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             if not required_fields:
                 raise ValueError("Missing required fields for template population.")
 
-            # a. Get Template Content via DataGathererAgent
+            # a. Get Template Content directly via retrieve_template_content tool
             logger.info(f"Gathering template: {template_name}")
-            template_res_raw = await Runner.run(data_gatherer_agent, input=f"Retrieve template content named '{template_name}'.", context=workflow_context)
+            # Get the template content using the minimal data gathering agent
+            template_res_raw = await Runner.run(
+                data_gathering_agent_minimal,
+                input=f"Retrieve template content named '{template_name}'.",
+                context=workflow_context
+            )
             template_data = template_res_raw.final_output
             if isinstance(template_data, RetrievalError): raise Exception(f"Template Retrieval Failed: {template_data.error_message}")
             if not isinstance(template_data, RetrievalSuccess): raise TypeError(f"Expected RetrievalSuccess for template, got {type(template_data)}")
@@ -1008,82 +1104,23 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             if temp_files_info:
                 for temp_file in temp_files_info:
                     logger.info(f"Gathering temporary file content: {temp_file['filename']}")
-                    temp_context_for_tool = workflow_context.copy(); temp_context_for_tool["temp_file_info"] = temp_file
-                    temp_res_raw = await Runner.run(data_gatherer_agent, input=f"Process temp file: {temp_file['filename']}", context=temp_context_for_tool)
-                    temp_data = temp_res_raw.final_output
+                    # Process temporary file using the minimal data gathering agent
+                    # Add temp file info to the context
+                    temp_context = workflow_context.copy()
+                    temp_context["temp_file_info"] = temp_file
+                    temp_data_raw = await Runner.run(
+                        data_gathering_agent_minimal,
+                        input=f"Process temporary file: {temp_file['filename']}",
+                        context=temp_context
+                    )
+                    temp_data = temp_data_raw.final_output
                     if isinstance(temp_data, RetrievalSuccess):
                         # Format the content more clearly to help extraction
-                        # Add line breaks after punctuation and highlight key-value pairs
-                        formatted_content = temp_data.content
+                        # Use the original content directly without any preprocessing
+                        enhanced_content = temp_data.content
 
-                        # Log the original content for debugging
-                        logger.info(f"Original content from {temp_file['filename']}: {formatted_content[:500]}...")
-
-                        # Pre-process the content to make it easier to extract key-value pairs
-                        # Replace common separators with a standard format
-                        preprocessed_content = formatted_content
-                        preprocessed_content = re.sub(r'([\w\s\-\'\u00C0-\u017F]+)\s*[:\-=]\s*', r'\1: ', preprocessed_content)
-
-                        # Try to identify key-value pairs and format them for better extraction
-                        # More comprehensive pattern that can handle various formats and special characters
-                        key_value_pattern = re.compile(r'([\w\s\-\'\u00C0-\u017F]+)\s*[:\-=]\s*([^\n\r]+)')
-                        formatted_lines = []
-
-                        # First, add the original content as-is to preserve all information
-                        formatted_lines.append("### ORIGINAL CONTENT ###")
-                        formatted_lines.append(formatted_content)
-                        formatted_lines.append("### FORMATTED CONTENT ###")
-
-                        # Process the content line by line
-                        for line in preprocessed_content.split('\n'):
-                            # Check if line contains key-value pairs
-                            matches = key_value_pattern.findall(line)
-                            if matches:
-                                for key, value in matches:
-                                    # Clean up the key and value
-                                    clean_key = key.strip().lower().replace(' ', '_')
-                                    clean_value = value.strip()
-                                    formatted_lines.append(f"KEY: {clean_key} | VALUE: {clean_value}")
-
-                                    # Also add variations of the key to increase chances of matching
-                                    # For example, if the key is "nom_du_salarié", also add "salarié_name"
-                                    if 'nom' in clean_key and ('salari' in clean_key or 'employ' in clean_key):
-                                        formatted_lines.append(f"KEY: salarié_name | VALUE: {clean_value}")
-                                        formatted_lines.append(f"KEY: employee_name | VALUE: {clean_value}")
-                                    elif 'nom' in clean_key and 'employeur' in clean_key:
-                                        formatted_lines.append(f"KEY: employeur_name | VALUE: {clean_value}")
-                                        formatted_lines.append(f"KEY: employer_name | VALUE: {clean_value}")
-                                    elif 'adresse' in clean_key and ('salari' in clean_key or 'employ' in clean_key):
-                                        formatted_lines.append(f"KEY: salarié_address | VALUE: {clean_value}")
-                                        formatted_lines.append(f"KEY: work_location | VALUE: {clean_value}")
-                                    elif 'adresse' in clean_key and 'employeur' in clean_key:
-                                        formatted_lines.append(f"KEY: employeur_address | VALUE: {clean_value}")
-                                    elif 'date' in clean_key and 'début' in clean_key:
-                                        formatted_lines.append(f"KEY: start_date | VALUE: {clean_value}")
-                            else:
-                                formatted_lines.append(line)
-
-                        # Add some special patterns to look for common fields
-                        # Look for names in the format "First Last"
-                        name_pattern = re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b')
-                        name_matches = name_pattern.findall(formatted_content)
-                        if name_matches:
-                            for name in name_matches:
-                                formatted_lines.append(f"KEY: employee_name | VALUE: {name}")
-                                formatted_lines.append(f"KEY: salarié_name | VALUE: {name}")
-
-                        # Look for dates in common formats
-                        date_pattern = re.compile(r'\b(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})\b')
-                        date_matches = date_pattern.findall(formatted_content)
-                        if date_matches:
-                            for date in date_matches:
-                                formatted_lines.append(f"KEY: date | VALUE: {date}")
-                                formatted_lines.append(f"KEY: start_date | VALUE: {date}")
-
-                        enhanced_content = '\n'.join(formatted_lines)
-
-                        # Log the enhanced content for debugging
-                        logger.info(f"Enhanced content for {temp_file['filename']}: {enhanced_content[:500]}...")
+                        # Log the content for debugging
+                        logger.info(f"Using semantic content from {temp_file['filename']}: {enhanced_content[:500]}...")
                         context_sources_text.append(f"\n\n### Document Content from: {temp_file['filename']}\n{enhanced_content}")
                     else:
                         logger.warning(f"Could not process temp file {temp_file['filename']}: {temp_data.error_message if isinstance(temp_data, RetrievalError) else 'Unknown error'}")
@@ -1102,10 +1139,13 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
                     field_query = " ".join(required_fields)
                     kb_query = f"Information about {field_query} in employment contracts or documents"
 
-                    kb_res_raw = await Runner.run(data_gatherer_agent,
-                                                input=f"Get KB content related to: {kb_query}",
-                                                context=kb_context)
-                    kb_data = kb_res_raw.final_output
+                    # Get KB content using the minimal data gathering agent
+                    kb_data_raw = await Runner.run(
+                        data_gathering_agent_minimal,
+                        input=f"Get KB content about 'labor_code' related to: {kb_query}",
+                        context=kb_context
+                    )
+                    kb_data = kb_data_raw.final_output
 
                     if isinstance(kb_data, RetrievalSuccess):
                         kb_content = kb_data.content
@@ -1226,88 +1266,48 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
                 except Exception as e:
                     logger.error(f"Error extracting data from final_output: {e}")
 
-            # If we still don't have data, try to extract directly from the temporary files
-            if not extracted_data_obj:
-                logger.warning("Attempting direct extraction from temporary files")
-                direct_extracted_data = {field: None for field in required_fields}
+            # If extraction failed, use agent-based recovery
+            if not extracted_data_obj or not isinstance(extracted_data_obj, ExtractedData):
+                logger.warning("Initial extraction failed, using agent-based recovery")
 
-                # Define a simple field mapping for direct extraction
-                direct_field_mapping = {
-                    "employee_name": ["nom", "prénom", "name", "employee", "employé", "salarié"],
-                    "employer_name": ["employeur", "société", "entreprise", "company"],
-                    "salarié_name": ["nom du salarié", "salarié", "employé"],
-                    "employeur_name": ["nom de l'employeur", "employeur", "société"],
-                    "work_location": ["lieu de travail", "adresse", "location"],
-                    "start_date": ["date de début", "date d'embauche", "commence"],
-                    "salary": ["salaire", "rémunération", "compensation"]
-                }
+                recovery_agent = Agent(
+                    name="ExtractionRecoveryAgent",
+                    instructions="""You are an expert at recovering from failed extractions.
+                    When initial extraction fails, you:
+                    1. Analyze why it failed
+                    2. Use alternative semantic approaches
+                    3. Look for information in unexpected places
+                    4. Never use patterns or rules - only semantic understanding
 
-                # Try to extract data directly from the temporary files
-                # Get the temporary files from the workflow context or temp_files_info
-                temp_files = temp_files_info if temp_files_info else []
-                logger.info(f"Found {len(temp_files)} temporary files for direct extraction")
+                    Provide the extracted data in a structured format.""",
+                    model="gpt-4o"
+                )
 
-                for temp_file in temp_files:
-                    temp_context_for_tool = workflow_context.copy(); temp_context_for_tool["temp_file_info"] = temp_file
-                    temp_res_raw = await Runner.run(data_gatherer_agent, input=f"Process temp file: {temp_file['filename']}", context=temp_context_for_tool)
-                    temp_data = temp_res_raw.final_output
+                recovery_prompt = f"""
+                Extraction failed for fields: {required_fields}
+                Available documents:
+                {json.dumps([f['filename'] for f in temp_files_info], indent=2)}
 
-                    if isinstance(temp_data, RetrievalSuccess):
-                        # Log the content for debugging
-                        logger.info(f"Direct extraction from {temp_file['filename']}: {temp_data.content[:500]}...")
+                Document contents:
+                {context_sources_text}
 
-                        # Try to extract key-value pairs directly
-                        content = temp_data.content
+                Extract the required information using semantic understanding only.
+                """
 
-                        # Look for patterns like "key: value" in the content
-                        direct_pattern = re.compile(r'([\w\s\-\'\u00C0-\u017F]+)\s*[:\-=]\s*([^\n\r]+)')
-                        direct_matches = direct_pattern.findall(content)
+                recovery_result = await Runner.run(recovery_agent, input=recovery_prompt)
 
-                        for key, value in direct_matches:
-                            key = key.strip().lower().replace(' ', '_')
-                            value = value.strip()
-
-                            # Try to match the key to a required field
-                            for field in required_fields:
-                                # Check for exact match or substring match
-                                if key == field or key in field or field in key:
-                                    direct_extracted_data[field] = value
-                                    logger.info(f"Directly extracted {field}: {value} from {temp_file['filename']}")
-                                    break
-                                # Check for field mapping matches
-                                elif field in direct_field_mapping:
-                                    if any(synonym.lower() in key.lower() for synonym in direct_field_mapping[field]):
-                                        direct_extracted_data[field] = value
-                                        logger.info(f"Directly extracted {field}: {value} from {temp_file['filename']} using field mapping")
-                                        break
-
-                        # Look for names in the format "First Last" as a generic pattern
-                        # This is a general pattern that works for many document types
-                        name_pattern = re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b')
-                        name_matches = name_pattern.findall(content)
-                        if name_matches and ('employee_name' in required_fields or 'salarié_name' in required_fields):
-                            name = name_matches[0]  # Use the first match
-                            if 'employee_name' in required_fields and direct_extracted_data['employee_name'] is None:
-                                direct_extracted_data['employee_name'] = name
-                                logger.info(f"Directly extracted employee_name: {name} from {temp_file['filename']}")
-                            if 'salarié_name' in required_fields and direct_extracted_data['salarié_name'] is None:
-                                direct_extracted_data['salarié_name'] = name
-                                logger.info(f"Directly extracted salarié_name: {name} from {temp_file['filename']}")
-
-                # Check if we extracted any data
-                if any(value is not None for value in direct_extracted_data.values()):
-                    logger.info(f"Successfully extracted data directly from temporary files: {direct_extracted_data}")
+                # Parse recovery result into ExtractedData
+                if isinstance(recovery_result.final_output, dict):
                     extracted_data_obj = ExtractedData(
-                        data=direct_extracted_data,
+                        data=recovery_result.final_output,
                         status="success"
                     )
                 else:
-                    logger.warning("Using empty data extraction - no data could be extracted from the provided files")
-                    # Create an empty data object with all required fields set to None
-                    empty_data = {field: None for field in required_fields}
+                    # Fallback to empty data if recovery fails
                     extracted_data_obj = ExtractedData(
-                        data=empty_data,
-                        status="success"
+                        data={field: None for field in required_fields},
+                        status="error",
+                        error_message="Recovery failed"
                     )
 
             logger.info(f"Using extracted data: {extracted_data_obj}")
@@ -1340,8 +1340,13 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
                 else:
                     kb_query = f"Information about {' '.join(required_fields)} in documents"
                 # Use the query to get relevant information
-                kb_res_raw = await Runner.run(data_gatherer_agent, input=f"Get KB content related to: {kb_query}", context=kb_context)
-                kb_data = kb_res_raw.final_output
+                # Get KB content using the minimal data gathering agent
+                kb_data_raw = await Runner.run(
+                    data_gathering_agent_minimal,
+                    input=f"Get KB content about 'labor_code' related to: {kb_query}",
+                    context=kb_context
+                )
+                kb_data = kb_data_raw.final_output
 
                 if isinstance(kb_data, RetrievalSuccess):
                     kb_content = kb_data.content
@@ -1376,13 +1381,15 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             # e. Generate DOCX file from populated markdown
             try:
                 logger.info(f"Generating DOCX file for template '{template_name}'")
-                docx_input = {
-                    "markdown_content": populated_markdown,
-                    "template_name": template_name
-                }
-                docx_result = await Runner.run(docx_generator_agent, input=json.dumps(docx_input))
-
-                # Access the DOCXGenerationResult from the final_output attribute
+                # Generate DOCX using the minimal DOCX generation agent
+                docx_result = await Runner.run(
+                    docx_generation_agent_minimal,
+                    input=json.dumps({
+                        "markdown_content": populated_markdown,
+                        "template_name": template_name
+                    }),
+                    context=workflow_context
+                )
                 docx_generation_result = docx_result.final_output
 
                 # Add download link to response if successful
@@ -1418,9 +1425,16 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             for temp_file in temp_files_info:
                 if temp_file['filename'] in temp_file_names: # Check if file is relevant
                     logger.info(f"Processing temporary file: {temp_file['filename']}")
-                    temp_context_for_tool = workflow_context.copy(); temp_context_for_tool["temp_file_info"] = temp_file
-                    temp_res_raw = await Runner.run(data_gatherer_agent, input=f"Process temp file: {temp_file['filename']}", context=temp_context_for_tool)
-                    temp_data = temp_res_raw.final_output
+                    # Process temporary file using the minimal data gathering agent
+                    # Add temp file info to the context
+                    temp_context = workflow_context.copy()
+                    temp_context["temp_file_info"] = temp_file
+                    temp_data_raw = await Runner.run(
+                        data_gathering_agent_minimal,
+                        input=f"Process temporary file: {temp_file['filename']}",
+                        context=temp_context
+                    )
+                    temp_data = temp_data_raw.final_output
                     if isinstance(temp_data, RetrievalSuccess):
                         temp_contexts.append(f"### Context from Uploaded: {temp_file['filename']}\n{temp_data.content}")
                     else:
@@ -1429,8 +1443,13 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             # 4. Get KB content
             logger.info(f"Getting KB content for query: {query_topic}")
             kb_context = workflow_context.copy()
-            kb_res_raw = await Runner.run(data_gatherer_agent, input=f"Get KB content for: {query_topic}", context=kb_context)
-            kb_data = kb_res_raw.final_output
+            # Get KB content using the minimal data gathering agent
+            kb_data_raw = await Runner.run(
+                data_gathering_agent_minimal,
+                input=f"Get KB content about 'general' related to: {query_topic}",
+                context=kb_context
+            )
+            kb_data = kb_data_raw.final_output
 
             # 5. Combine contexts
             combined_context = []
@@ -1460,8 +1479,12 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
                 raise ValueError("Template name missing for analysis")
 
             logger.info(f"Gathering template for analysis: {template_name}")
-            template_context = workflow_context.copy()
-            template_res_raw = await Runner.run(data_gatherer_agent, input=f"Retrieve template content named '{template_name}'.", context=template_context)
+            # Get the template content using the minimal data gathering agent
+            template_res_raw = await Runner.run(
+                data_gathering_agent_minimal,
+                input=f"Retrieve template content named '{template_name}'.",
+                context=workflow_context
+            )
             template_data = template_res_raw.final_output
 
             if not isinstance(template_data, RetrievalSuccess):
@@ -1489,8 +1512,13 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
                 else:
                     kb_query = f"Information about {template_name} templates and requirements"
 
-                kb_res_raw = await Runner.run(data_gatherer_agent, input=f"Get KB content for: {kb_query}", context=kb_context)
-                kb_data = kb_res_raw.final_output
+                # Get KB content using the minimal data gathering agent
+                kb_data_raw = await Runner.run(
+                    data_gathering_agent_minimal,
+                    input=f"Get KB content about 'general' related to: {kb_query}",
+                    context=kb_context
+                )
+                kb_data = kb_data_raw.final_output
 
                 if isinstance(kb_data, RetrievalSuccess):
                     kb_content = kb_data.content
@@ -1514,9 +1542,16 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
                 temp_contexts = []
                 for temp_file in temp_files_info:
                     logger.info(f"Processing temporary file for template analysis: {temp_file['filename']}")
-                    temp_context_for_tool = workflow_context.copy(); temp_context_for_tool["temp_file_info"] = temp_file
-                    temp_res_raw = await Runner.run(data_gatherer_agent, input=f"Process temp file: {temp_file['filename']}", context=temp_context_for_tool)
-                    temp_data = temp_res_raw.final_output
+                    # Process temporary file using the minimal data gathering agent
+                    # Add temp file info to the context
+                    temp_context = workflow_context.copy()
+                    temp_context["temp_file_info"] = temp_file
+                    temp_data_raw = await Runner.run(
+                        data_gathering_agent_minimal,
+                        input=f"Process temporary file: {temp_file['filename']}",
+                        context=temp_context
+                    )
+                    temp_data = temp_data_raw.final_output
                     if isinstance(temp_data, RetrievalSuccess):
                         temp_contexts.append(f"### Context from Uploaded: {temp_file['filename']}\n{temp_data.content}")
                 temp_content = "\n\n".join(temp_contexts)
@@ -1564,9 +1599,16 @@ async def run_complex_rag_workflow(user_query: str, vs_id: str, history: List[Di
             for temp_file in temp_files_info:
                  if temp_file['filename'] in temp_filenames: # Check if file is relevant
                     logger.info(f"Gathering temporary file content: {temp_file['filename']}")
-                    temp_context_for_tool = workflow_context.copy(); temp_context_for_tool["temp_file_info"] = temp_file
-                    temp_res_raw = await Runner.run(data_gatherer_agent, input=f"Process temp file: {temp_file['filename']}", context=temp_context_for_tool)
-                    temp_data = temp_res_raw.final_output
+                    # Process temporary file using the minimal data gathering agent
+                    # Add temp file info to the context
+                    temp_context = workflow_context.copy()
+                    temp_context["temp_file_info"] = temp_file
+                    temp_data_raw = await Runner.run(
+                        data_gathering_agent_minimal,
+                        input=f"Process temporary file: {temp_file['filename']}",
+                        context=temp_context
+                    )
+                    temp_data = temp_data_raw.final_output
                     if isinstance(temp_data, RetrievalSuccess): temp_contexts.append(f"### Context from Uploaded: {temp_file['filename']}\n{temp_data.content}")
                     else: temp_contexts.append(f"### Error processing {temp_file['filename']}:\n{temp_data.error_message if isinstance(temp_data, RetrievalError) else 'Unknown Error'}")
 
@@ -1874,8 +1916,7 @@ def download_docx(filename):
             return "Invalid filename", 400
 
         # Get the file path
-        docx_dir = os.getenv('DOCX_OUTPUT_DIR', 'docx_output')
-        file_path = os.path.join(docx_dir, filename)
+        file_path = os.path.join(DOCX_OUTPUT_DIR, filename)
 
         # Check if the file exists
         if not os.path.exists(file_path):
@@ -2238,6 +2279,27 @@ async def list_templates_route():
     except Exception as e:
         logger.error(f"Error listing templates: {e}", exc_info=True)
         return jsonify({"status": "error", "message": f"Error listing templates: {str(e)}"}), 500
+
+# --- Cache Management Routes ---
+@app.route('/cache/clear', methods=['POST'])
+async def clear_cache_route():
+    """Clear the semantic search cache"""
+    try:
+        await clear_semantic_cache()
+        return jsonify({"status": "success", "message": "Semantic cache cleared"})
+    except Exception as e:
+        logger.error(f"Error clearing cache: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/cache/stats', methods=['GET'])
+async def cache_stats_route():
+    """Get cache statistics"""
+    try:
+        stats = await get_cache_stats()
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"Error getting cache stats: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- Other Routes ---
 @app.route('/create_vector_store', methods=['POST'])
